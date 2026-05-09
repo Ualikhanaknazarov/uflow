@@ -1,0 +1,2110 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UFlow — Эллипсоид выпуска руды v13</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
+<style>
+:root,[data-theme="light"]{
+  --bg:#f7f6f2;--surface:#f9f8f5;--surface-2:#fbfbf9;--surface-off:#f0ede8;
+  --border:rgba(40,37,29,0.12);--text:#28251d;--muted:#7a7974;--faint:#bab9b4;
+  --primary:#01696f;--primary-h:#0c4e54;--primary-hi:#cedcd8;
+  --warning:#964219;--error:#a12c7b;--success:#437a22;
+  --shadow:0 2px 8px rgba(40,37,29,0.08),0 8px 24px rgba(40,37,29,0.05);
+  --r:0.5rem;--font:'Inter',sans-serif;
+}
+[data-theme="dark"]{
+  --bg:#141312;--surface:#1c1b19;--surface-2:#222120;--surface-off:#272523;
+  --border:rgba(255,255,255,0.08);--text:#cdccca;--muted:#797876;--faint:#4a4948;
+  --primary:#4f98a3;--primary-h:#227f8b;--primary-hi:#1f3a3c;
+  --warning:#bb653b;--error:#d163a7;--success:#6daa45;
+  --shadow:0 2px 8px rgba(0,0,0,0.3),0 8px 24px rgba(0,0,0,0.2);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased;scroll-behavior:smooth}
+body{font-family:var(--font);font-size:15px;background:var(--bg);color:var(--text);height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+input,button,select{font:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none}
+
+/* LAYOUT */
+.app{display:grid;grid-template-columns:280px 1fr 300px;flex:1;min-height:0;overflow:hidden}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:20px 16px;overflow-y:auto;display:flex;flex-direction:column;gap:20px}
+.main{display:flex;flex-direction:column;overflow:hidden}
+.right-panel{background:var(--surface);border-left:1px solid var(--border);padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+.warning-card{border-radius:var(--r);padding:10px 12px;font-size:12px;line-height:1.4;border:1px solid var(--border);background:var(--surface-2)}
+.warning-card.red{border-left:4px solid var(--error);color:var(--error)}
+.warning-card.orange{border-left:4px solid var(--warning);color:var(--warning)}
+.warning-card.yellow{border-left:4px solid #d19900;color:#d19900}
+.warning-card.green{border-left:4px solid var(--success);color:var(--success)}
+.reco-block{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);padding:12px;font-size:13px;line-height:1.5}
+
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--surface)}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;letter-spacing:-0.01em}
+.logo svg{color:var(--primary)}
+.theme-btn{width:36px;height:36px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--muted);transition:all 180ms ease}
+.theme-btn:hover{color:var(--text);border-color:var(--primary)}
+
+/* SIDEBAR SECTIONS */
+.section-title{font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.field-group{display:flex;flex-direction:column;gap:8px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:12px;color:var(--muted);font-weight:500}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.input{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);padding:7px 10px;font-size:13px;width:100%;transition:border-color 180ms ease;-moz-appearance:textfield}
+.input::-webkit-outer-spin-button,.input::-webkit-inner-spin-button{-webkit-appearance:none}
+.input:focus{outline:none;border-color:var(--primary)}
+.input-with-unit{position:relative}
+.input-with-unit .input{padding-right:32px}
+.unit{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--faint);pointer-events:none}
+.divider{height:1px;background:var(--border)}
+select.input{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23797876' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;cursor:pointer}
+
+/* RESULTS PANEL */
+.results{background:var(--surface-2);border-radius:var(--r);padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kpi{background:var(--surface);border-radius:calc(var(--r) - 2px);padding:10px 10px 8px;border:1px solid var(--border)}
+.kpi-label{font-size:10px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px}
+.kpi-value{font-size:18px;font-weight:700;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;line-height:1}
+.kpi-unit{font-size:10px;color:var(--muted);margin-top:2px}
+.kpi.warn .kpi-value{color:var(--warning)}
+.kpi.ok .kpi-value{color:var(--success)}
+.kpi-full{grid-column:1/-1}
+
+/* METALS TABLE */
+.metals-table{width:100%;border-collapse:collapse;font-size:12px}
+.metals-table th{text-align:left;padding:5px 8px;color:var(--muted);font-weight:500;border-bottom:1px solid var(--border)}
+.metals-table td{padding:5px 8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
+.metals-table tr:last-child td{border-bottom:none}
+.metals-table .val{font-weight:600;color:var(--text)}
+.tag{display:inline-block;background:var(--primary-hi);color:var(--primary);font-size:10px;font-weight:600;padding:1px 6px;border-radius:20px}
+
+/* TABS */
+.tabs{display:flex;gap:2px;padding:12px 20px 0;border-bottom:1px solid var(--border)}
+.tab{padding:8px 14px;font-size:13px;font-weight:500;color:var(--muted);border-radius:var(--r) var(--r) 0 0;cursor:pointer;border:1px solid transparent;border-bottom:none;transition:all 180ms ease}
+.tab:hover{color:var(--text)}
+.tab.active{background:var(--surface);border-color:var(--border);color:var(--text);margin-bottom:-1px}
+.tab-content{display:none;flex:1;padding:20px;overflow:hidden}
+.tab-content.active{display:flex;flex-direction:column;gap:16px}
+#tab5{overflow:hidden}
+.canvas-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;flex:1;min-height:0}
+canvas{display:block;width:100%;height:100%}
+
+/* FORMULA BOX */
+.formula-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px}
+.formula-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.formula-name{font-size:12px;color:var(--muted);min-width:120px;font-weight:500}
+.formula-expr{font-family:monospace;font-size:13px;color:var(--primary);background:var(--primary-hi);padding:3px 8px;border-radius:4px}
+.formula-result{font-size:15px;font-weight:700;color:var(--text)}
+
+/* STATUS */
+.status-bar{padding:6px 20px;font-size:12px;font-weight:500;border-top:1px solid var(--border)}
+.status-bar.ok{background:color-mix(in oklch,var(--success) 12%,var(--surface));color:var(--success)}
+.status-bar.warn{background:color-mix(in oklch,var(--warning) 12%,var(--surface));color:var(--warning)}
+.status-bar.danger{background:color-mix(in oklch,var(--error) 12%,var(--surface));color:var(--error)}
+
+@media(max-width:800px){
+  .app{grid-template-columns:1fr}
+  .sidebar{border-right:none;border-bottom:1px solid var(--border)}
+  .right-panel{border-left:none;border-top:1px solid var(--border)}
+}
+
+/* STEP TABLE TAB */
+.step-tab-wrap{display:flex;flex-direction:column;gap:12px;height:100%;min-height:0}
+.step-chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;flex:0 0 260px}
+.step-table-wrap{flex:1;overflow-y:auto;min-height:0;border-radius:var(--r);border:1px solid var(--border)}
+.step-table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+.step-table thead th{position:sticky;top:0;background:var(--surface);z-index:1;text-align:right;padding:7px 10px;color:var(--muted);font-weight:600;font-size:11px;letter-spacing:0.04em;border-bottom:2px solid var(--border);white-space:nowrap}
+.step-table thead th:first-child{text-align:center}
+.step-table tbody td{padding:5px 10px;text-align:right;border-bottom:1px solid var(--border)}
+.step-table tbody td:first-child{text-align:center;font-weight:700}
+.step-table tbody tr:hover{background:var(--surface-2)}
+.step-table tbody tr.current-draw{background:color-mix(in oklch,var(--primary) 10%,var(--surface));border-left:3px solid var(--primary)}
+.step-table tbody tr.warn-row td{color:var(--warning)}
+.step-table tbody tr.danger-row td{color:var(--error)}
+.step-table tbody tr.optimal-row{background:color-mix(in oklch,var(--success) 12%,var(--surface));outline:2px solid var(--success);outline-offset:-1px}
+.cell-good{color:var(--success)!important;font-weight:700}
+.cell-warn{color:var(--warning)!important;font-weight:700}
+.cell-danger{color:var(--error)!important;font-weight:700}
+
+/* FORMULA TAB ENHANCED */
+.formula-section{display:flex;flex-direction:column;gap:6px}
+.formula-section-title{font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:6px 12px;border-radius:var(--r);margin-top:4px}
+.fsec-geo{background:color-mix(in oklch,var(--primary) 12%,var(--surface));color:var(--primary);border-left:3px solid var(--primary)}
+.fsec-base{background:color-mix(in oklch,var(--muted) 12%,var(--surface));color:var(--muted);border-left:3px solid var(--muted)}
+.fsec-geom{background:color-mix(in oklch,var(--warning) 12%,var(--surface));color:var(--warning);border-left:3px solid var(--warning)}
+.fsec-upper{background:color-mix(in oklch,var(--success) 12%,var(--surface));color:var(--success);border-left:3px solid var(--success)}
+.fsec-total{background:color-mix(in oklch,var(--error) 12%,var(--surface));color:var(--error);border-left:3px solid var(--error)}
+.fsec-cad{background:color-mix(in oklch,#d19900 12%,var(--surface));color:#b07a00;border-left:3px solid #d19900}
+[data-theme="dark"] .fsec-cad{color:#e8af34}
+.fsec-neighbor{background:color-mix(in oklch,#6e8efb 12%,var(--surface));color:#5070d0;border-left:3px solid #6e8efb}
+[data-theme="dark"] .fsec-neighbor{color:#8eaaff}
+.fsec-econ{background:color-mix(in oklch,#10b981 12%,var(--surface));color:#059669;border-left:3px solid #10b981}
+[data-theme="dark"] .fsec-econ{color:#34d399}
+.frow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:7px 12px;border-radius:calc(var(--r) - 2px);background:var(--surface-2)}
+.frow-hi{outline:1px solid var(--border)}
+.fname{font-size:12px;color:var(--muted);min-width:210px;flex-shrink:0;font-weight:500}
+.fexpr{font-family:monospace;font-size:12px;color:var(--primary);background:var(--primary-hi);padding:2px 7px;border-radius:4px;flex:1;min-width:0;word-break:break-all}
+.fresult{font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;min-width:90px;text-align:right}
+.fnote{font-size:10px;color:var(--faint);font-style:italic;padding:0 12px 4px 222px;line-height:1.4}
+
+/* CuEq inline display */
+.cueq-display{background:color-mix(in oklch,#d19900 8%,var(--surface));border:1px solid color-mix(in oklch,#d19900 25%,var(--border));border-radius:var(--r);padding:10px 12px;margin-top:4px}
+.cueq-label{font-size:10px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.cueq-row{display:flex;align-items:baseline;gap:6px;margin-bottom:4px}
+.cueq-value{font-size:26px;font-weight:800;letter-spacing:-0.03em;font-variant-numeric:tabular-nums;color:#b07a00}
+[data-theme="dark"] .cueq-value{color:#e8af34}
+.cueq-unit{font-size:14px;font-weight:600;color:var(--muted)}
+.cueq-breakdown{font-size:10px;color:var(--muted);margin-left:2px;line-height:1.3}
+.cueq-formula{font-size:10px;color:var(--faint);font-family:monospace;line-height:1.5;margin-top:2px}
+
+/* COLLAPSIBLE SECTION */
+.collapsible-toggle{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.collapsible-toggle:hover{color:var(--text)}
+.collapsible-toggle svg{transition:transform 200ms ease;flex-shrink:0}
+.collapsible-toggle.open svg{transform:rotate(90deg)}
+.collapsible-body{display:none}
+.collapsible-body.open{display:block}
+
+/* RECOMMENDATION KPI */
+.kpi-recommendation{grid-column:1/-1;background:color-mix(in oklch,var(--success) 8%,var(--surface));border:2px solid var(--success);text-align:center;padding:12px 10px 10px}
+.kpi-recommendation .kpi-value{font-size:22px;color:var(--success)}
+.kpi-econ{border-color:color-mix(in oklch,#10b981 35%,var(--border));background:color-mix(in oklch,#10b981 6%,var(--surface))}
+
+/* BTN */
+.btn{padding:7px 14px;border-radius:var(--r);font-size:12px;font-weight:600;transition:all 180ms ease}
+.btn.primary{background:var(--primary);color:white}
+.btn.primary:hover{background:var(--primary-h)}
+/* TOP NAV */
+.top-nav{display:flex;align-items:center;gap:4px;padding:6px 20px;background:var(--surface-2);border-bottom:1px solid var(--border);font-size:12px}
+.top-nav a{color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:var(--r);transition:all 180ms ease;font-weight:500}
+.top-nav a:hover{color:var(--text);background:var(--surface-off)}
+.top-nav a.active{color:var(--primary);background:var(--primary-hi);font-weight:600}
+</style>
+</head>
+<body>
+<nav class="top-nav">
+  <a href="index.html" class="active">Калькулятор</a>
+  <a href="chamber.html">Паспорт камер</a>
+  <a href="import.html">Импорт данных</a>
+</nav>
+<div class="app">
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="header" style="padding:0 0 4px;border:none;background:none">
+    <div class="logo">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <ellipse cx="12" cy="12" rx="4" ry="10" opacity=".4"/>
+        <ellipse cx="12" cy="12" rx="10" ry="4" opacity=".4"/>
+        <ellipse cx="12" cy="12" rx="7" ry="10"/>
+      </svg>
+      UFlow
+    </div>
+    <button class="theme-btn" onclick="toggleTheme()" aria-label="Тема" id="themeBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
+
+  <div>
+    <div class="section-title">Параметры камеры</div>
+    <div class="field-group">
+      <div class="field-row">
+        <div class="field"><label>Высота H, м</label>
+          <div class="input-with-unit"><input class="input" id="H" type="number" value="15" min="1" max="100" step="0.5"><span class="unit">м</span></div>
+        </div>
+        <div class="field"><label>Ширина W, м</label>
+          <div class="input-with-unit"><input class="input" id="W" type="number" value="10" min="1" max="60" step="0.5"><span class="unit">м</span></div>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Длина L, м</label>
+          <div class="input-with-unit"><input class="input" id="L" type="number" value="20" min="1" max="100" step="0.5"><span class="unit">м</span></div>
+        </div>
+        <div class="field"><label>Шаг drawpoint l₀, м</label>
+          <div class="input-with-unit"><input class="input" id="l0" type="number" value="6" min="1" max="20" step="0.5"><span class="unit">м</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div>
+    <div class="section-title">Свойства руды</div>
+    <div class="field-group">
+      <div class="field-row">
+        <div class="field"><label>Сыпучесть p</label>
+          <div class="input-with-unit"><input class="input" id="p" type="number" value="1.15" min="0.3" max="3" step="0.05"><span class="unit">м</span></div>
+        </div>
+        <div class="field"><label>Плотность ρ</label>
+          <div class="input-with-unit"><input class="input" id="rho" type="number" value="2.8" min="1" max="5" step="0.1"><span class="unit">т/м³</span></div>
+        </div>
+      </div>
+      <div class="field"><label>Draw % (текущий)</label>
+        <div class="input-with-unit"><input class="input" id="draw" type="number" value="60" min="5" max="100" step="5"><span class="unit">%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- FEATURE 2: Dilution model select -->
+  <div>
+    <div class="section-title">Модель разубоживания</div>
+    <div class="field-group">
+      <div class="field"><label>D_base модель</label>
+        <select class="input" id="dil_model">
+          <option value="piecewise" selected>Кусочно-линейная (Mine)</option>
+          <option value="logistic">Логистическая</option>
+          <option value="exponential">Экспоненциальная</option>
+        </select>
+      </div>
+      <div style="font-size:10px;color:var(--muted);line-height:1.5;margin-top:2px">
+        Выбранная модель используется во всех расчётах D_base
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div>
+    <div class="section-title">Тоннаж в блоке</div>
+    <div class="field-group">
+      <div class="field"><label>Тоннаж руды</label>
+        <div class="input-with-unit"><input class="input" id="tonnage" type="number" value="150000" min="1" step="100"><span class="unit">т</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div>
+    <div class="section-title">Содержание металлов</div>
+    <div class="field-group">
+      <div class="field-row">
+        <div class="field"><label>Cu</label>
+          <div class="input-with-unit"><input class="input" id="cu" type="number" value="0.8" min="0" step="0.01"><span class="unit">%</span></div>
+        </div>
+        <div class="field"><label>Au</label>
+          <div class="input-with-unit"><input class="input" id="au" type="number" value="2.5" min="0" step="0.01"><span class="unit">г/т</span></div>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Ag</label>
+          <div class="input-with-unit"><input class="input" id="ag" type="number" value="8" min="0" step="0.1"><span class="unit">г/т</span></div>
+        </div>
+      </div>
+      <!-- FEATURE 1: Configurable k_Au, k_Ag -->
+      <div class="field-row">
+        <div class="field"><label>k_Au</label>
+          <input class="input" id="k_au" type="number" value="0.08" min="0" step="0.01">
+        </div>
+        <div class="field"><label>k_Ag</label>
+          <input class="input" id="k_ag" type="number" value="0.003" min="0" step="0.001">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>CuEq</label>
+          <div class="input-with-unit"><input class="input" id="cueq-input" type="number" value="" min="0" step="0.001" placeholder="авто"><span class="unit">%</span></div>
+        </div>
+      </div>
+      <div class="cueq-display" id="cueq-display">
+        <div class="cueq-label">CuEq (авто)</div>
+        <div class="cueq-row">
+          <span class="cueq-value" id="cueq-auto-val">—</span>
+          <span class="cueq-unit">%</span>
+        </div>
+        <div class="cueq-breakdown" id="cueq-auto-breakdown"></div>
+        <div class="cueq-formula" id="cueq-formula-display">Cu + Au×k_Au + Ag×k_Ag</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ПОЛОЖЕНИЕ РУДНОГО ТЕЛА ОТНОСИТЕЛЬНО DRAWPOINT -->
+  <div>
+    <div class="section-title">Положение рудного тела</div>
+    <div class="field-group">
+      <div class="field-row">
+        <div class="field"><label>← Лево от DP, м</label>
+          <div class="input-with-unit"><input class="input" id="ore_left" type="number" value="5" min="0" step="0.5"><span class="unit">м</span></div>
+        </div>
+        <div class="field"><label>Право от DP →, м</label>
+          <div class="input-with-unit"><input class="input" id="ore_right" type="number" value="5" min="0" step="0.5"><span class="unit">м</span></div>
+        </div>
+      </div>
+      <div class="field"><label>↑ Верх от DP, м</label>
+        <div class="input-with-unit"><input class="input" id="ore_up" type="number" value="0" min="0" step="0.5"><span class="unit">м</span></div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);line-height:1.5;margin-top:4px">
+        Расстояние от точки выпуска до границ рудного тела.<br>
+        Мощность m = лево + право = <span id="ore-m-display">10</span> м.<br>
+        Если эллипсоид выходит за границу — конструктивная разбавка.
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ПАДЕНИЕ РУДНОГО ТЕЛА -->
+  <div>
+    <div class="section-title">Падение рудного тела</div>
+    <div class="field-group">
+      <div class="field-row">
+        <div class="field"><label>Угол лежачего борта</label>
+          <div class="input-with-unit"><input class="input" id="dip_foot" type="number" value="75" min="0" max="180" step="1"><span class="unit">°</span></div>
+        </div>
+        <div class="field"><label>Угол висячего борта</label>
+          <div class="input-with-unit"><input class="input" id="dip_hang" type="number" value="75" min="0" max="180" step="1"><span class="unit">°</span></div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);line-height:1.5;margin-top:4px">
+        Углы влияют на D_geom и отображаются на разрезе X-Z. 90° = вертикаль
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ВЫШЕЛЕЖАЩИЙ ПОДЭТАЖ -->
+  <div>
+    <div class="section-title">Вышележащий подэтаж</div>
+    <div class="field-group">
+      <div class="field"><label>Тоннаж верхнего подэтажа, т</label>
+        <div class="input-with-unit"><input class="input" id="upper_ton" type="number" value="0" min="0" step="100"><span class="unit">т</span></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Cu верхнего, %</label>
+          <div class="input-with-unit"><input class="input" id="upper_cu" type="number" value="0" min="0" step="0.01"><span class="unit">%</span></div>
+        </div>
+        <div class="field"><label>Au верхнего, г/т</label>
+          <div class="input-with-unit"><input class="input" id="upper_au" type="number" value="0" min="0" step="0.01"><span class="unit">г/т</span></div>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Ag верхнего, г/т</label>
+          <div class="input-with-unit"><input class="input" id="upper_ag" type="number" value="0" min="0" step="0.1"><span class="unit">г/т</span></div>
+        </div>
+        <div class="field"><label>CuEq верхнего, %</label>
+          <div class="input-with-unit"><input class="input" id="upper_cueq" type="number" value="0" min="0" step="0.001"><span class="unit">%</span></div>
+        </div>
+      </div>
+      <div class="field"><label>Draw %, при котором верх начинает входить</label>
+        <div class="input-with-unit"><input class="input" id="upper_draw_start" type="number" value="50" min="0" max="100" step="5"><span class="unit">%</span></div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);line-height:1.5;margin-top:4px">
+        Доля верхнего массива нарастает линейно от 0% (при draw = порог) до 100% (при draw = 100%)
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- FEATURE 4: СОСЕДНИЕ КАМЕРЫ -->
+  <div>
+    <div class="collapsible-toggle" onclick="toggleCollapse(this)">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 1l4 4-4 4"/></svg>
+      Соседние камеры (лево/право)
+    </div>
+    <div class="collapsible-body">
+      <div class="field-group">
+        <div style="font-size:10px;font-weight:600;color:var(--muted);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:2px">← Левая камера</div>
+        <div class="field-row">
+          <div class="field"><label>Тоннаж левой, т</label>
+            <div class="input-with-unit"><input class="input" id="left_ton" type="number" value="0" min="0" step="100"><span class="unit">т</span></div>
+          </div>
+          <div class="field"><label>Cu левой, %</label>
+            <div class="input-with-unit"><input class="input" id="left_cu" type="number" value="0" min="0" step="0.01"><span class="unit">%</span></div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Au левой, г/т</label>
+            <div class="input-with-unit"><input class="input" id="left_au" type="number" value="0" min="0" step="0.01"><span class="unit">г/т</span></div>
+          </div>
+          <div class="field"><label>Ag левой, г/т</label>
+            <div class="input-with-unit"><input class="input" id="left_ag" type="number" value="0" min="0" step="0.1"><span class="unit">г/т</span></div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>CuEq левой, %</label>
+            <div class="input-with-unit"><input class="input" id="left_cueq" type="number" value="0" min="0" step="0.001"><span class="unit">%</span></div>
+          </div>
+          <div class="field"><label>Draw% начала влияния</label>
+            <div class="input-with-unit"><input class="input" id="left_draw_start" type="number" value="70" min="0" max="100" step="5"><span class="unit">%</span></div>
+          </div>
+        </div>
+        <div class="divider" style="margin:6px 0"></div>
+        <div style="font-size:10px;font-weight:600;color:var(--muted);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:2px">→ Правая камера</div>
+        <div class="field-row">
+          <div class="field"><label>Тоннаж правой, т</label>
+            <div class="input-with-unit"><input class="input" id="right_ton" type="number" value="0" min="0" step="100"><span class="unit">т</span></div>
+          </div>
+          <div class="field"><label>Cu правой, %</label>
+            <div class="input-with-unit"><input class="input" id="right_cu" type="number" value="0" min="0" step="0.01"><span class="unit">%</span></div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Au правой, г/т</label>
+            <div class="input-with-unit"><input class="input" id="right_au" type="number" value="0" min="0" step="0.01"><span class="unit">г/т</span></div>
+          </div>
+          <div class="field"><label>Ag правой, г/т</label>
+            <div class="input-with-unit"><input class="input" id="right_ag" type="number" value="0" min="0" step="0.1"><span class="unit">г/т</span></div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>CuEq правой, %</label>
+            <div class="input-with-unit"><input class="input" id="right_cueq" type="number" value="0" min="0" step="0.001"><span class="unit">%</span></div>
+          </div>
+          <div class="field"><label>Draw% начала влияния</label>
+            <div class="input-with-unit"><input class="input" id="right_draw_start" type="number" value="70" min="0" max="100" step="5"><span class="unit">%</span></div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);line-height:1.5;margin-top:4px">
+          Боковое влияние = 0.5 × линейная доля от draw_start до 100%
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- AUTOCAD / EXCEL MODE -->
+  <div>
+    <div class="section-title">Режим AutoCAD / Excel</div>
+    <div class="field-group">
+      <div class="field"><label>Коэффициент формы k</label>
+        <div class="input-with-unit"><input class="input" id="shape_k" type="number" value="0.25192" min="0.01" step="0.00001"><span class="unit">k</span></div>
+      </div>
+      <div class="field"><label>Шаг между веерами</label>
+        <div class="input-with-unit"><input class="input" id="spacing" type="number" value="2.4" min="0.1" step="0.1"><span class="unit">м</span></div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);line-height:1.5;margin-top:4px">
+        Для плановой отрисовки в AutoCAD: площадь = объем в кубах / шаг между веерами; затем a и b считаются по Excel-подходу через коэффициент формы k.
+      </div>
+    </div>
+  </div>
+
+  <!-- Metals -->
+  <div>
+    <div class="section-title">Металлы в блоке</div>
+    <table class="metals-table">
+      <thead><tr><th>Металл</th><th>Содержание</th><th>Тоннаж</th></tr></thead>
+      <tbody id="metals-tbody"></tbody>
+    </table>
+  </div>
+
+  <div style="height:8px"></div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="header">
+    <div style="font-size:13px;color:var(--muted)">Визуализация геометрии выпуска</div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="setTab(0,this)">Разрез X-Z</div>
+    <div class="tab" onclick="setTab(1,this)">Вид сверху (ромб)</div>
+    <div class="tab" onclick="setTab(2,this)">Разубоживание</div>
+    <div class="tab" onclick="setTab(3,this)">Поток руды</div>
+    <div class="tab" onclick="setTab(4,this)">Формулы</div>
+    <div class="tab" onclick="setTab(5,this)">Выпуск по этапам</div>
+  </div>
+
+  <div class="tab-content active" id="tab0">
+    <div class="canvas-wrap"><canvas id="c0"></canvas></div>
+  </div>
+  <div class="tab-content" id="tab1">
+    <div class="canvas-wrap"><canvas id="c1"></canvas></div>
+  </div>
+  <div class="tab-content" id="tab2">
+    <div class="canvas-wrap"><canvas id="c2"></canvas></div>
+  </div>
+  <div class="tab-content" id="tab3">
+    <div class="canvas-wrap"><canvas id="c3"></canvas></div>
+  </div>
+  <div class="tab-content" id="tab4" style="overflow-y:auto">
+    <div id="formulas" style="display:flex;flex-direction:column;gap:5px"></div>
+  </div>
+
+  <div class="tab-content" id="tab5">
+    <div class="step-tab-wrap">
+      <div class="step-chart-wrap"><canvas id="c5"></canvas></div>
+      <div class="step-table-wrap">
+        <table class="step-table">
+          <thead>
+            <tr>
+              <th>Draw %</th>
+              <th>T выпущено, т</th>
+              <th>D_base, %</th>
+              <th>D_геом, %</th>
+              <th>Верхний подэт., т</th>
+              <th>Сосед. лев., т</th>
+              <th>Сосед. прав., т</th>
+              <th>D_total, %</th>
+              <th>CuEq_факт, %</th>
+              <th>Потеря CuEq, %</th>
+              <th>$/т маржа</th>
+            </tr>
+          </thead>
+          <tbody id="step-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar ok" id="status">Загрузка...</div>
+</div>
+
+<!-- RIGHT PANEL -->
+<aside class="right-panel" id="right-panel-content">
+  <!-- Результаты расчёта -->
+  <div>
+    <div class="section-title">Результаты расчёта</div>
+    <div class="results">
+      <div class="kpi"><div class="kpi-label">Объём V_э</div><div class="kpi-value" id="r-Ve">—</div><div class="kpi-unit">м³</div></div>
+      <div class="kpi"><div class="kpi-label">Тоннаж T</div><div class="kpi-value" id="r-T">—</div><div class="kpi-unit">т</div></div>
+      <div class="kpi"><div class="kpi-label">2b ширина</div><div class="kpi-value" id="r-2b">—</div><div class="kpi-unit">м</div></div>
+      <div class="kpi"><div class="kpi-label">h_кас</div><div class="kpi-value" id="r-hkas">—</div><div class="kpi-unit">м</div></div>
+      <div class="kpi"><div class="kpi-label">Площадь эллипса 3D</div><div class="kpi-value" id="r-area-ell">—</div><div class="kpi-unit">м²</div></div>
+      <div class="kpi"><div class="kpi-label">Большая полуось a (3D)</div><div class="kpi-value" id="r-a">—</div><div class="kpi-unit">м</div></div>
+      <div class="kpi"><div class="kpi-label">Малая полуось b (3D)</div><div class="kpi-value" id="r-b">—</div><div class="kpi-unit">м</div></div>
+      <div class="kpi"><div class="kpi-label">Площадь эллипса AutoCAD</div><div class="kpi-value" id="r-area-cad">—</div><div class="kpi-unit">м²</div></div>
+      <div class="kpi"><div class="kpi-label">Большая полуось a CAD</div><div class="kpi-value" id="r-a-cad">—</div><div class="kpi-unit">м</div></div>
+      <div class="kpi"><div class="kpi-label">Малая полуось b CAD</div><div class="kpi-value" id="r-b-cad">—</div><div class="kpi-unit">м</div></div>
+      <div class="kpi" id="kpi-dil"><div class="kpi-label">Dilution</div><div class="kpi-value" id="r-dil">—</div><div class="kpi-unit">%</div></div>
+      <div class="kpi" id="kpi-cueq"><div class="kpi-label">CuEq блока</div><div class="kpi-value" id="r-cueq">—</div><div class="kpi-unit">%</div></div>
+      <div class="kpi" id="kpi-dil-total"><div class="kpi-label">Dil. общее</div><div class="kpi-value" id="r-dil-total">—</div><div class="kpi-unit">%</div></div>
+      <div class="kpi"><div class="kpi-label">CuEq факт.</div><div class="kpi-value" id="r-cueq-fact">—</div><div class="kpi-unit">%</div></div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Оптимальный Draw% -->
+  <div>
+    <div class="section-title">Оптимальный Draw%</div>
+    <div class="field-group">
+      <div class="field-row">
+        <div class="field"><label>Бортовое CuEq (cut-off)</label>
+          <div class="input-with-unit"><input class="input" id="cutoff_cueq" type="number" value="0.4" min="0" step="0.01"><span class="unit">%</span></div>
+        </div>
+        <div class="field"><label>Порог D_total</label>
+          <div class="input-with-unit"><input class="input" id="cutoff_dtotal" type="number" value="30" min="0" step="1"><span class="unit">%</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="results" id="optimal-results" style="margin-top:8px">
+      <div class="kpi" id="kpi-opt-cueq"><div class="kpi-label">Draw% опт. (CuEq)</div><div class="kpi-value" id="r-opt-cueq">—</div><div class="kpi-unit">%</div></div>
+      <div class="kpi" id="kpi-opt-dtotal"><div class="kpi-label">Draw% опт. (D_total)</div><div class="kpi-value" id="r-opt-dtotal">—</div><div class="kpi-unit">%</div></div>
+      <div class="kpi kpi-recommendation" id="kpi-opt-rec"><div class="kpi-label">Рекомендация</div><div class="kpi-value" id="r-opt-rec">—</div><div class="kpi-unit">остановить при этом Draw%</div></div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Экономические параметры -->
+  <div>
+    <div class="collapsible-toggle" onclick="toggleCollapse(this)">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 1l4 4-4 4"/></svg>
+      Показать экономику
+    </div>
+    <div class="collapsible-body">
+      <div class="field-group">
+        <div class="field-row">
+          <div class="field"><label>Цена Cu (LME)</label>
+            <div class="input-with-unit"><input class="input" id="price_cu" type="number" value="9500" min="0" step="100"><span class="unit">$/т</span></div>
+          </div>
+          <div class="field"><label>Цена Au</label>
+            <div class="input-with-unit"><input class="input" id="price_au" type="number" value="3000" min="0" step="50"><span class="unit">$/тр.унц</span></div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Цена Ag</label>
+            <div class="input-with-unit"><input class="input" id="price_ag" type="number" value="33" min="0" step="1"><span class="unit">$/тр.унц</span></div>
+          </div>
+          <div class="field"><label>OPEX переработки</label>
+            <div class="input-with-unit"><input class="input" id="opex" type="number" value="25" min="0" step="1"><span class="unit">$/т</span></div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Извлечение Cu</label>
+            <div class="input-with-unit"><input class="input" id="rec_cu" type="number" value="87" min="0" max="100" step="1"><span class="unit">%</span></div>
+          </div>
+          <div class="field"><label>Извлечение Au</label>
+            <div class="input-with-unit"><input class="input" id="rec_au" type="number" value="80" min="0" max="100" step="1"><span class="unit">%</span></div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Извлечение Ag</label>
+            <div class="input-with-unit"><input class="input" id="rec_ag" type="number" value="70" min="0" max="100" step="1"><span class="unit">%</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="results" id="econ-results" style="margin-top:8px">
+        <div class="kpi kpi-econ"><div class="kpi-label">Выручка (gross)</div><div class="kpi-value" id="r-econ-gross">—</div><div class="kpi-unit">$/т руды</div></div>
+        <div class="kpi kpi-econ"><div class="kpi-label">Маржа на тонну</div><div class="kpi-value" id="r-econ-margin">—</div><div class="kpi-unit">$/т руды</div></div>
+        <div class="kpi kpi-econ kpi-full"><div class="kpi-label">Потеря выручки от разубоживания</div><div class="kpi-value" id="r-econ-loss">—</div><div class="kpi-unit">$/т (разница блок vs факт)</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- CSV Export -->
+  <div>
+    <button class="btn primary" id="export-csv-btn" type="button" style="width:100%">Выгрузить CSV</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Предупреждения -->
+  <div>
+    <div class="section-title">Предупреждения</div>
+    <div id="warnings-container" style="display:flex;flex-direction:column;gap:6px"></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Рекомендации -->
+  <div>
+    <div class="section-title">Рекомендации</div>
+    <div class="reco-block" id="reco-block"></div>
+  </div>
+</aside>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────
+let activeTab = 0;
+const inputs = [
+  'H','W','L','l0','p','rho','draw','tonnage','cu','au','ag','cueq-input',
+  'k_au','k_ag',
+  'ore_left','ore_right','ore_up','dip_foot','dip_hang',
+  'upper_ton','upper_cu','upper_au','upper_ag','upper_cueq','upper_draw_start',
+  'dil_model',
+  'left_ton','left_cu','left_au','left_ag','left_cueq','left_draw_start',
+  'right_ton','right_cu','right_au','right_ag','right_cueq','right_draw_start',
+  'cutoff_cueq','cutoff_dtotal',
+  'price_cu','price_au','price_ag','opex','rec_cu','rec_au','rec_ag',
+  'shape_k','spacing'
+];
+inputs.forEach(id => {
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('input', () => { calc(); draw(); });
+});
+
+function v(id){ return parseFloat(document.getElementById(id).value) || 0; }
+function vs(id){ return document.getElementById(id).value; }
+
+// ── COLLAPSIBLE ───────────────────────────────────────────────────
+function toggleCollapse(el){
+  el.classList.toggle('open');
+  const body = el.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+// ── DILUTION MODEL FUNCTIONS ──────────────────────────────────────
+function dilBasePiecewise(d){
+  return Math.min(d<=40 ? d*0.1 : d<=70 ? 4+(d-40)*0.6 : 22+(d-70)*1.3, 65);
+}
+function dilBaseLogistic(d){
+  return 65 / (1 + Math.exp(-0.08*(d-55)));
+}
+function dilBaseExponential(d){
+  return Math.min(1.5 * Math.exp(0.04 * d) - 1.5, 65);
+}
+function getDilBase(d, model){
+  if(model==='logistic') return dilBaseLogistic(d);
+  if(model==='exponential') return dilBaseExponential(d);
+  return dilBasePiecewise(d);
+}
+function getModelName(model){
+  if(model==='logistic') return 'Логистическая';
+  if(model==='exponential') return 'Экспоненциальная';
+  return 'Кусочно-линейная (Mine)';
+}
+function getModelFormula(model){
+  if(model==='logistic') return '65 / (1 + exp(-0.08×(draw−55)))';
+  if(model==='exponential') return 'min(1.5 × exp(0.04 × draw) − 1.5, 65)';
+  return 'draw≤40: d×0.1 | 40–70: 4+(d−40)×0.6 | ≥70: 22+(d−70)×1.3, cap 65';
+}
+
+// ── ECONOMICS HELPER ─────────────────────────────────────────────
+function calcRevenue(cu_pct, au_gpt, ag_gpt){
+  const price_cu = v('price_cu');
+  const price_au = v('price_au');
+  const price_ag = v('price_ag');
+  const rec_cu = v('rec_cu') / 100;
+  const rec_au = v('rec_au') / 100;
+  const rec_ag = v('rec_ag') / 100;
+  // Cu: содержание в % × цену за тонну × 10 (для перевода % → кг/т → тонн) × извлечение
+  const rev_cu = cu_pct / 100 * price_cu * rec_cu;
+  // Au: г/т → тройские унции → цена × извлечение
+  const rev_au = au_gpt / 31.1035 * price_au * rec_au;
+  // Ag: аналогично
+  const rev_ag = ag_gpt / 31.1035 * price_ag * rec_ag;
+  return rev_cu + rev_au + rev_ag;
+}
+
+let C = {};
+
+function calc(){
+  const H=v('H'), W=v('W'), L=v('L'), l0=v('l0'), p=v('p'), rho=v('rho'),
+        draw=v('draw'), ton=v('tonnage'),
+        cu=v('cu'), au=v('au'), ag=v('ag');
+  const dilModel = vs('dil_model');
+
+  // Ellipsoid — защита от p=0
+  const p_safe = Math.max(p, 0.01);
+  const Ve = (Math.PI/3)*p_safe*H*H;
+  const Vr = 15*Ve;
+  const b2 = 2*Math.sqrt(0.5*p_safe*H);
+  const b2r = 2*Math.sqrt(2.46*p_safe*H);
+  const hkas = (l0*l0)/(2*p_safe);
+  const a = H/2 + p_safe;
+  const b = b2/2;
+  const area_ell = Math.PI * a * b;
+
+  // ── AUTOCAD / EXCEL plan-view ellipse ─────────────────────────────
+  const spacing = Math.max(v('spacing'), 0.01);
+  const shape_k = Math.max(v('shape_k'), 0.00001);
+  const vol_cubes = ton / rho;
+  const area_plan_excel = vol_cubes / spacing;
+  const ratio_ab = 3.97;
+  const b_excel = Math.sqrt(area_plan_excel / (Math.PI * ratio_ab));
+  const a_excel = ratio_ab * b_excel;
+
+  const T_ell = Ve*rho;
+
+  // FEATURE 1: configurable k coefficients
+  const K_AU = v('k_au') || 0.08;
+  const K_AG = v('k_ag') || 0.003;
+
+  // Dilution model (switchable)
+  const d_thresh = hkas/H;
+  const dil_capped = getDilBase(draw, dilModel);
+
+  // ── METALS ──────────────────────────────────────────
+  const cu_t = ton*cu/100;
+  const au_kg = ton*au/1000;
+  const ag_kg = ton*ag/1000;
+
+  const cuEq_auto = +(cu + au * K_AU + ag * K_AG).toFixed(4);
+  const cuEq_raw = parseFloat(document.getElementById('cueq-input').value);
+  const cuEq = (cuEq_raw > 0) ? cuEq_raw : cuEq_auto;
+  const cuEq_is_auto = !(cuEq_raw > 0);
+
+  document.getElementById('cueq-auto-val').textContent = cuEq_auto.toFixed(3);
+  document.getElementById('cueq-auto-breakdown').textContent =
+    `${cu.toFixed(2)} + ${au.toFixed(2)}×${K_AU} + ${ag.toFixed(1)}×${K_AG}`;
+  document.getElementById('cueq-formula-display').textContent =
+    `Cu + Au×${K_AU} + Ag×${K_AG}`;
+
+  const dispEl = document.getElementById('cueq-display');
+  dispEl.style.opacity = cuEq_is_auto ? '1' : '0.45';
+  dispEl.title = cuEq_is_auto ? 'Используется авто-расчёт' : 'Используется введённое значение';
+
+  // ── ГЕОМЕТРИЧЕСКОЕ РАЗУБОЖИВАНИЕ (асимметричное) ────
+  const ore_left = Math.max(v('ore_left'), 0);
+  const ore_right = Math.max(v('ore_right'), 0);
+  const ore_up = Math.max(v('ore_up'), 0);
+  const m = ore_left + ore_right; // мощность = лево + право
+  document.getElementById('ore-m-display').textContent = m.toFixed(1);
+  const dip_foot = v('dip_foot');
+  const dip_hang = v('dip_hang');
+  // Эффективные углы для D_geom
+  const eff_foot = dip_foot > 90 ? (180 - dip_foot) : dip_foot;
+  const eff_hang = dip_hang > 90 ? (180 - dip_hang) : dip_hang;
+  const dip_avg = (eff_foot + eff_hang) / 2;
+  const dip_factor = 90 / Math.max(dip_avg, 30);
+  // Асимметричный D_geom: проверяем каждую сторону отдельно
+  const half_b = b2 / 2; // полуширина эллипсоида
+  const ore_left_eff = ore_left / dip_factor;
+  const ore_right_eff = ore_right / dip_factor;
+  const ore_up_eff = ore_up;
+  // Выход эллипсоида за каждую границу
+  const overshoot_left = Math.max(half_b - ore_left_eff, 0);
+  const overshoot_right = Math.max(half_b - ore_right_eff, 0);
+  const overshoot_up = (ore_up > 0 && a > 0) ? Math.max(a - (H - ore_up), 0) : 0;
+  const total_overshoot = overshoot_left + overshoot_right + overshoot_up;
+  const dil_geom_pct = total_overshoot > 0 ? Math.min(total_overshoot / (half_b * 2 + a) * 100, 60) : 0;
+
+  // ── ВЫШЕЛЕЖАЩИЙ ПОДЭТАЖ ─────────────────────────────
+  const upper_ton_k  = v('upper_ton');
+  const upper_cu_v   = v('upper_cu');
+  const upper_au_v   = v('upper_au');
+  const upper_ag_v   = v('upper_ag');
+  const upper_cueq_v = v('upper_cueq');
+  const ds = v('upper_draw_start');
+  const upper_mix_frac = (upper_ton_k > 0 && draw > ds)
+                         ? Math.min((draw - ds) / (100 - ds), 1.0) : 0;
+  const upper_in_flow = upper_ton_k * upper_mix_frac;
+
+  // ── FEATURE 4: СОСЕДНИЕ КАМЕРЫ ──────────────────────
+  const left_ton_k = v('left_ton');
+  const left_cueq_v = v('left_cueq');
+  const left_ds = v('left_draw_start');
+  const left_mix_frac = (left_ton_k > 0 && draw > left_ds)
+    ? Math.min((draw - left_ds) / (100 - left_ds), 1.0) * 0.5 : 0;
+  const left_in_flow = left_ton_k * left_mix_frac;
+
+  const right_ton_k = v('right_ton');
+  const right_cueq_v = v('right_cueq');
+  const right_ds = v('right_draw_start');
+  const right_mix_frac = (right_ton_k > 0 && draw > right_ds)
+    ? Math.min((draw - right_ds) / (100 - right_ds), 1.0) * 0.5 : 0;
+  const right_in_flow = right_ton_k * right_mix_frac;
+
+  // ── ОБЩЕЕ РАЗУБОЖИВАНИЕ ─────────────────────────────
+  const T_geom_waste  = ton * (dil_geom_pct / 100);
+  const T_base_waste  = ton * (dil_capped / 100);
+  const T_waste_total = Math.max(T_geom_waste, T_base_waste) + upper_in_flow + left_in_flow + right_in_flow;
+  const T_total_flow  = ton + T_waste_total;
+  const dil_total_pct = T_total_flow > 0
+    ? Math.min(T_waste_total / T_total_flow * 100, 90) : 0;
+
+  // ── ФАКТИЧЕСКОЕ СОДЕРЖАНИЕ CuEq ────────────────────
+  const cueq_fact = T_total_flow > 0
+    ? (ton * cuEq + upper_in_flow * upper_cueq_v + left_in_flow * left_cueq_v + right_in_flow * right_cueq_v) / T_total_flow
+    : cuEq;
+
+  // ── ФАКТИЧЕСКОЕ СОДЕРЖАНИЕ каждого металла ─────────
+  const cu_fact = T_total_flow > 0
+    ? (ton * cu + upper_in_flow * v('upper_cu') + left_in_flow * v('left_cu') + right_in_flow * v('right_cu')) / T_total_flow : cu;
+  const au_fact = T_total_flow > 0
+    ? (ton * au + upper_in_flow * v('upper_au') + left_in_flow * v('left_au') + right_in_flow * v('right_au')) / T_total_flow : au;
+  const ag_fact = T_total_flow > 0
+    ? (ton * ag + upper_in_flow * v('upper_ag') + left_in_flow * v('left_ag') + right_in_flow * v('right_ag')) / T_total_flow : ag;
+
+  C = {H,W,L,l0,p,rho,draw,ton,cu,au,ag,m,ore_left,ore_right,ore_up,dip_foot,dip_hang,dip_avg,dip_factor,
+       half_b,ore_left_eff,ore_right_eff,overshoot_left,overshoot_right,overshoot_up,
+       Ve,Vr,b2,b2r,hkas,a,b,area_ell,spacing,shape_k,vol_cubes,area_plan_excel,a_excel,b_excel,T_ell,dil_capped,
+       cu_t,au_kg,ag_kg,cuEq,draw_thresh:d_thresh*100,K_AU,K_AG,
+       dil_geom_pct, upper_in_flow, upper_ton_k, upper_mix_frac,
+       upper_cu_v, upper_au_v, upper_ag_v, upper_cueq_v, ds,
+       left_ton_k, left_cueq_v, left_ds, left_mix_frac, left_in_flow,
+       right_ton_k, right_cueq_v, right_ds, right_mix_frac, right_in_flow,
+       T_geom_waste, T_base_waste, T_waste_total, T_total_flow, dil_total_pct, cueq_fact,
+       cu_fact, au_fact, ag_fact,
+       dilModel};
+
+  // Update KPIs
+  document.getElementById('r-Ve').textContent = Ve.toFixed(0);
+  document.getElementById('r-T').textContent = T_ell.toFixed(0);
+  document.getElementById('r-2b').textContent = b2.toFixed(2);
+  document.getElementById('r-hkas').textContent = hkas.toFixed(1);
+  document.getElementById('r-area-ell').textContent = area_ell.toFixed(1);
+  document.getElementById('r-a').textContent = a.toFixed(2);
+  document.getElementById('r-b').textContent = b.toFixed(2);
+  document.getElementById('r-area-cad').textContent = area_plan_excel.toFixed(1);
+  document.getElementById('r-a-cad').textContent = a_excel.toFixed(2);
+  document.getElementById('r-b-cad').textContent = b_excel.toFixed(2);
+
+  const dilEl = document.getElementById('r-dil');
+  const kpiDil = document.getElementById('kpi-dil');
+  dilEl.textContent = dil_capped.toFixed(1);
+  kpiDil.className = 'kpi ' + (dil_capped<15 ? 'ok' : dil_capped<30 ? 'warn' : '');
+  if(dil_capped>=30) dilEl.style.color = 'var(--error)'; else dilEl.style.color='';
+
+  document.getElementById('r-cueq').textContent = cuEq.toFixed(3);
+
+  const dilTotEl = document.getElementById('r-dil-total');
+  dilTotEl.textContent = dil_total_pct.toFixed(1);
+  const kpiDilTot = document.getElementById('kpi-dil-total');
+  kpiDilTot.className = 'kpi ' + (dil_total_pct<15 ? 'ok' : dil_total_pct<30 ? 'warn' : '');
+  if(dil_total_pct>=30) dilTotEl.style.color='var(--error)'; else dilTotEl.style.color='';
+
+  document.getElementById('r-cueq-fact').textContent = cueq_fact.toFixed(3);
+
+  // FEATURE 3: Optimal draw%
+  const cutoff_cueq = v('cutoff_cueq');
+  const cutoff_dtotal = v('cutoff_dtotal');
+  let optDrawCuEq = 100, optDrawDtotal = 100;
+  for(let d=1; d<=100; d++){
+    const r = calcAtDrawPct(d);
+    if(r.cueq_fact < cutoff_cueq && optDrawCuEq === 100){ optDrawCuEq = d - 1; }
+    if(r.dil_total_pct > cutoff_dtotal && optDrawDtotal === 100){ optDrawDtotal = d - 1; }
+  }
+  optDrawCuEq = Math.max(optDrawCuEq, 0);
+  optDrawDtotal = Math.max(optDrawDtotal, 0);
+  const optRec = Math.min(optDrawCuEq, optDrawDtotal);
+  C.optDrawCuEq = optDrawCuEq;
+  C.optDrawDtotal = optDrawDtotal;
+  C.optRec = optRec;
+
+  document.getElementById('r-opt-cueq').textContent = optDrawCuEq;
+  document.getElementById('r-opt-dtotal').textContent = optDrawDtotal;
+  document.getElementById('r-opt-rec').textContent = 'Draw ' + optRec + '%';
+  // Color coding
+  const kpiOptCueq = document.getElementById('kpi-opt-cueq');
+  kpiOptCueq.className = 'kpi ' + (optDrawCuEq >= 80 ? 'ok' : optDrawCuEq >= 50 ? 'warn' : '');
+  if(optDrawCuEq < 50) document.getElementById('r-opt-cueq').style.color = 'var(--error)';
+  else document.getElementById('r-opt-cueq').style.color = '';
+
+  // FEATURE 5: Economics
+  const grossBlock = calcRevenue(cu, au, ag);
+  const grossFact = calcRevenue(cu_fact, au_fact, ag_fact);
+  const opex = v('opex');
+  const margin = grossFact - opex;
+  const revLoss = grossBlock - grossFact;
+
+  document.getElementById('r-econ-gross').textContent = grossFact.toFixed(1);
+  document.getElementById('r-econ-margin').textContent = margin.toFixed(1);
+  const marginEl = document.getElementById('r-econ-margin');
+  marginEl.style.color = margin > 0 ? 'var(--success)' : 'var(--error)';
+  document.getElementById('r-econ-loss').textContent = revLoss.toFixed(1);
+  C.grossBlock = grossBlock;
+  C.grossFact = grossFact;
+  C.margin = margin;
+  C.revLoss = revLoss;
+
+  // Metals table
+  const tbody = document.getElementById('metals-tbody');
+  const rows = [
+    {name:'Cu', val: cu.toFixed(2)+'%', ton: cu_t.toFixed(0)+' т'},
+    {name:'Au', val: au.toFixed(2)+' г/т', ton: au_kg.toFixed(0)+' кг'},
+    {name:'Ag', val: ag.toFixed(1)+' г/т', ton: ag_kg.toFixed(0)+' кг'},
+    {name:'CuEq', val: '<span class="tag">'+cuEq.toFixed(3)+'%</span>', ton: '—'},
+  ];
+  let extraRows = '';
+  if(dil_geom_pct > 0){
+    extraRows += `<tr style="color:var(--warning)"><td>▷ Конструктив. Dil</td><td class="val">${dil_geom_pct.toFixed(1)}%</td><td>${T_geom_waste.toFixed(0)} т</td></tr>`;
+  }
+  if(dil_capped > 0){
+    extraRows += `<tr style="color:var(--muted)"><td>▷ База (draw%) Dil</td><td class="val">${dil_capped.toFixed(1)}%</td><td>${T_base_waste.toFixed(0)} т</td></tr>`;
+  }
+  if(upper_ton_k > 0){
+    extraRows += `<tr style="color:var(--muted)"><td>▷ Верхний подэтаж</td><td class="val">${(upper_mix_frac*100).toFixed(0)}% вошло</td><td>${upper_in_flow.toFixed(0)} т</td></tr>`;
+    extraRows += `<tr style="color:var(--muted)"><td style="padding-left:16px">CuEq верхнего</td><td class="val">${upper_cueq_v.toFixed(3)}%</td><td>—</td></tr>`;
+  }
+  if(left_ton_k > 0){
+    extraRows += `<tr style="color:var(--muted)"><td>▷ Левая камера</td><td class="val">${(left_mix_frac*100).toFixed(0)}% вошло</td><td>${left_in_flow.toFixed(0)} т</td></tr>`;
+  }
+  if(right_ton_k > 0){
+    extraRows += `<tr style="color:var(--muted)"><td>▷ Правая камера</td><td class="val">${(right_mix_frac*100).toFixed(0)}% вошло</td><td>${right_in_flow.toFixed(0)} т</td></tr>`;
+  }
+  extraRows += `<tr style="border-top:2px solid var(--border);font-weight:700"><td>CuEq факт. (смесь)</td><td class="val" style="color:var(--primary)">${cueq_fact.toFixed(3)}%</td><td>Dil. общ: ${dil_total_pct.toFixed(1)}%</td></tr>`;
+
+  tbody.innerHTML = rows.map(r=>`<tr><td>${r.name}</td><td class="val">${r.val}</td><td>${r.ton}</td></tr>`).join('') + extraRows;
+
+  // Status
+  const sb = document.getElementById('status');
+  const dilWarn = dil_total_pct > dil_capped ? dil_total_pct : dil_capped;
+  if(hkas >= H*0.9){
+    sb.className='status-bar danger'; sb.textContent=`⚠ h_кас (${hkas.toFixed(1)} м) ≥ высоте подэтажа — расстояние l₀ слишком велико, разубоживание неизбежно`;
+  } else if(dilWarn>30){
+    sb.className='status-bar warn';
+    let msg = `▲ Общее разубоживание ${dil_total_pct.toFixed(1)}%`;
+    if(dil_geom_pct>0) msg += ` (конструктив: ${dil_geom_pct.toFixed(1)}%`;
+    if(upper_in_flow>0) msg += `, верхний подэтаж: ${upper_in_flow.toFixed(0)} т`;
+    if(left_in_flow>0 || right_in_flow>0) msg += `, соседи: ${(left_in_flow+right_in_flow).toFixed(0)} т`;
+    msg += `)`;
+    msg += `. CuEq факт: ${cueq_fact.toFixed(3)}%`;
+    sb.textContent = msg;
+  } else {
+    sb.className='status-bar ok'; sb.textContent=`✓ Draw ${draw}% — разубоживание в норме. Базовое: ${dil_capped.toFixed(1)}%, общее: ${dil_total_pct.toFixed(1)}%. CuEq факт: ${cueq_fact.toFixed(3)}%`;
+  }
+
+  // Update warnings
+  const warningsHtml = [];
+  if(hkas >= H){
+    warningsHtml.push('<div class="warning-card red">h_кас превышает высоту камеры</div>');
+  }
+  if(dil_total_pct > 30){
+    warningsHtml.push('<div class="warning-card orange">Разубоживание выше 30%</div>');
+  } else if(dil_total_pct > 15){
+    warningsHtml.push('<div class="warning-card yellow">Разубоживание повышенное</div>');
+  }
+  if(draw < optRec && draw > 60){
+    warningsHtml.push('<div class="warning-card green">Можно продолжать выпуск</div>');
+  }
+  if(warningsHtml.length === 0){
+    warningsHtml.push('<div style="font-size:12px;color:var(--muted)">Нет предупреждений</div>');
+  }
+  document.getElementById('warnings-container').innerHTML = warningsHtml.join('');
+
+  // Update recommendations
+  let recoHtml = '';
+  if(dil_total_pct < 15){
+    recoHtml = '✓ Низкое разубоживание. Выпуск в норме.';
+  } else if(dil_total_pct <= 30){
+    recoHtml = '⚠ Разубоживание умеренное. Контролируйте состояние забоя.';
+  } else {
+    recoHtml = '⛔ Высокое разубоживание. Рассмотреть остановку выпуска.';
+  }
+  recoHtml += `<br><span style="font-size:11px;color:var(--muted)">Оптимальный Draw: ${optRec}% | Маржа: ${margin.toFixed(1)} $/т</span>`;
+  document.getElementById('reco-block').innerHTML = recoHtml;
+
+  updateFormulas();
+}
+
+// ── DRAW ──────────────────────────────────────────────────────────
+function draw(){
+  if(activeTab===0) drawSection();
+  if(activeTab===1) drawTop();
+  if(activeTab===2) drawCurve();
+  if(activeTab===3) drawFlow();
+  if(activeTab===5) drawStepTab();
+}
+
+function col(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+function setupCanvas(id){
+  const canvas = document.getElementById(id);
+  const wrap = canvas.parentElement;
+  canvas.width = wrap.clientWidth * devicePixelRatio;
+  canvas.height = wrap.clientHeight * devicePixelRatio;
+  canvas.style.width = wrap.clientWidth+'px';
+  canvas.style.height = wrap.clientHeight+'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  return {ctx, W:wrap.clientWidth, H:wrap.clientHeight};
+}
+
+// TAB 0: Section X-Z
+function drawSection(){
+  const {ctx, W:cw, H:ch} = setupCanvas('c0');
+  const {H,b2,b2r,hkas,Ve,Vr,rho,ton,draw,dil_capped} = C;
+  ctx.clearRect(0,0,cw,ch);
+
+  const pad = 60, scale = Math.min((ch-pad*2)/H, (cw-pad*2)/(b2r*1.5));
+  const ox = cw/2, oy = ch-pad;
+
+  const T_ell = Ve*rho;
+  const T_loos = Vr*rho;
+  const pct_ell = ton>0 ? T_ell/ton*100 : 0;
+  const pct_loos = ton>0 ? T_loos/ton*100 : 0;
+  const T_drawn = ton * (draw/100);
+  const pct_drawn = draw;
+
+  ctx.fillStyle = col('--bg') || '#141312';
+  ctx.fillRect(0,0,cw,ch);
+  ctx.fillStyle = 'rgba(130,100,60,0.13)';
+  ctx.fillRect(0,0,cw,oy-H*scale);
+  ctx.fillStyle = col('--muted');
+  ctx.font = '11px Inter,sans-serif';
+  ctx.fillText('Обрушенная порода', 8, 20);
+
+  ctx.strokeStyle = col('--border');
+  ctx.lineWidth=0.5;
+  for(let i=0;i<=H;i+=5){
+    const y = oy - i*scale;
+    ctx.beginPath(); ctx.moveTo(pad/2,y); ctx.lineTo(cw-pad/2,y); ctx.stroke();
+    ctx.fillStyle=col('--faint');
+    ctx.font='10px Inter,sans-serif';
+    ctx.fillText(i+' м', 4, y+3);
+  }
+
+  const br2 = b2r/2*scale;
+  const br  = b2/2*scale;
+  const ell_cy = oy - H*scale/2;
+
+  ctx.save();
+  ctx.setLineDash([5,4]);
+  ctx.strokeStyle = col('--warning');
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.ellipse(ox, ell_cy, br2, H/2*scale, 0, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.restore();
+
+  const lx2 = ox + br2 + 8;
+  ctx.fillStyle = col('--warning');
+  ctx.font = '11px Inter,sans-serif';
+  ctx.fillText('Зона разрыхления', lx2, ell_cy - 20);
+  roundRect(ctx, lx2, ell_cy - 14, 148, 46, 6);
+  ctx.fillStyle = 'rgba(150,66,25,0.12)';
+  ctx.fill();
+  ctx.strokeStyle = col('--warning'); ctx.lineWidth=1;
+  ctx.stroke();
+  ctx.fillStyle = col('--warning');
+  ctx.font = 'bold 13px Inter,sans-serif';
+  ctx.fillText(`V = ${(Vr/1000).toFixed(1)} тыс. м³`, lx2+8, ell_cy+2);
+  ctx.font = '11px Inter,sans-serif';
+  ctx.fillText(`T = ${T_loos.toFixed(0)} т`, lx2+8, ell_cy+17);
+  ctx.fillStyle = col('--muted');
+  ctx.font = '10px Inter,sans-serif';
+  ctx.fillText(`(${pct_loos.toFixed(0)}% от блока)`, lx2+8, ell_cy+30);
+
+  ctx.save();
+  ctx.strokeStyle = col('--primary');
+  ctx.lineWidth = 2.5;
+  ctx.fillStyle = 'rgba(1,105,111,0.12)';
+  ctx.beginPath();
+  ctx.ellipse(ox, ell_cy, br, H/2*scale, 0, 0, Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(ox, ell_cy, br-1, H/2*scale-1, 0, 0, Math.PI*2);
+  ctx.clip();
+  const fillH = H*scale*(draw/100);
+  ctx.fillStyle = 'rgba(1,105,111,0.28)';
+  ctx.fillRect(ox-br, ell_cy + H/2*scale - fillH, br*2, fillH);
+  ctx.restore();
+
+  const lx1 = ox - br - 185;
+  ctx.fillStyle = col('--primary');
+  ctx.font = '11px Inter,sans-serif';
+  ctx.fillText('Зона выпуска', lx1, ell_cy - 20);
+  const cuEq_t_ell = T_ell * C.cuEq / 100;
+  const cuEq_t_drawn = T_drawn * C.cuEq / 100;
+  const cu_t_ell = T_ell * C.cu / 100;
+  const au_kg_ell = T_ell * C.au / 1000000;
+
+  roundRect(ctx, lx1, ell_cy - 14, 178, 94, 6);
+  ctx.fillStyle = 'rgba(1,105,111,0.12)'; ctx.fill();
+  ctx.strokeStyle = col('--primary'); ctx.lineWidth=1; ctx.stroke();
+
+  ctx.fillStyle = col('--primary');
+  ctx.font = 'bold 13px Inter,sans-serif';
+  ctx.fillText(`V = ${Ve.toFixed(0)} м³`, lx1+8, ell_cy+2);
+  ctx.font = '11px Inter,sans-serif';
+  ctx.fillText(`T = ${T_ell.toFixed(0)} т`, lx1+8, ell_cy+17);
+  ctx.fillStyle = col('--muted');
+  ctx.font = '10px Inter,sans-serif';
+  ctx.fillText(`(${pct_ell.toFixed(1)}% от блока)`, lx1+8, ell_cy+30);
+  ctx.fillStyle = col('--gold') || '#d19900';
+  ctx.font = 'bold 11px Inter,sans-serif';
+  ctx.fillText(`CuEq ${C.cuEq.toFixed(3)}%  →  ${cuEq_t_ell.toFixed(0)} т`, lx1+8, ell_cy+45);
+  ctx.font = '10px Inter,sans-serif';
+  ctx.fillStyle = col('--muted');
+  ctx.fillText(`Cu ${cu_t_ell.toFixed(0)} т  |  Au ${(au_kg_ell*1000).toFixed(0)} кг`, lx1+8, ell_cy+58);
+  ctx.fillStyle = 'rgba(1,105,111,0.85)';
+  ctx.font = 'bold 11px Inter,sans-serif';
+  ctx.fillText(`▼ Выпущено: ${T_drawn.toFixed(0)} т (${pct_drawn}%)`, lx1+8, ell_cy+72);
+  ctx.fillStyle = col('--gold') || '#d19900';
+  ctx.font = '10px Inter,sans-serif';
+  ctx.fillText(`   CuEq выпущено: ${cuEq_t_drawn.toFixed(0)} т`, lx1+8, ell_cy+85);
+
+  if(C.m > 0 && b2/2 > 0){
+    // Асимметричное положение: лево/право от drawpoint'a
+    const ore_l_px = C.ore_left * scale;
+    const ore_r_px = C.ore_right * scale;
+    const ore_up_px = C.ore_up * scale;
+    // Углы 0-180°
+    const foot_rad = C.dip_foot * Math.PI / 180;
+    const hang_rad = C.dip_hang * Math.PI / 180;
+    const shift_foot = (Math.abs(C.dip_foot - 90) < 0.5) ? 0 : (H / Math.tan(foot_rad)) * scale;
+    const shift_hang = (Math.abs(C.dip_hang - 90) < 0.5) ? 0 : (H / Math.tan(hang_rad)) * scale;
+    // Нижние точки от drawpoint'a (основание)
+    const bottom_left = ox - ore_l_px;
+    const bottom_right = ox + ore_r_px;
+    // Верхние точки с учётом углов падения
+    const y_top = oy - H*scale;
+    const y_ore_top = ore_up_px > 0 ? oy - (H - C.ore_up)*scale : y_top;
+    const top_left = bottom_left - shift_foot;
+    const top_right = bottom_right + shift_hang;
+    // Рисуем контур рудного тела
+    ctx.save();
+    ctx.fillStyle = 'rgba(67,122,34,0.08)';
+    ctx.beginPath();
+    ctx.moveTo(bottom_left, oy);
+    if(ore_up_px > 0){
+      // С отступом сверху: рудное тело не доходит до кровли
+      const frac = (H - C.ore_up) / H;
+      const tl = ox - ore_l_px - shift_foot * frac;
+      const tr = ox + ore_r_px + shift_hang * frac;
+      ctx.lineTo(tl, y_ore_top);
+      ctx.lineTo(tr, y_ore_top);
+    } else {
+      ctx.lineTo(top_left, y_top);
+      ctx.lineTo(top_right, y_top);
+    }
+    ctx.lineTo(bottom_right, oy);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = col('--success') || '#437a22';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4,3]);
+    ctx.beginPath();
+    if(ore_up_px > 0){
+      const frac = (H - C.ore_up) / H;
+      const tl = ox - ore_l_px - shift_foot * frac;
+      const tr = ox + ore_r_px + shift_hang * frac;
+      ctx.moveTo(bottom_left, oy); ctx.lineTo(tl, y_ore_top);
+      ctx.moveTo(bottom_right, oy); ctx.lineTo(tr, y_ore_top);
+      ctx.moveTo(tl, y_ore_top); ctx.lineTo(tr, y_ore_top);
+    } else {
+      ctx.moveTo(bottom_left, oy); ctx.lineTo(top_left, y_top);
+      ctx.moveTo(bottom_right, oy); ctx.lineTo(top_right, y_top);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Метки: мощность, углы, смещение
+    ctx.fillStyle = col('--success') || '#437a22';
+    ctx.font = '10px Inter,sans-serif';
+    ctx.textAlign = 'center';
+    const label_y = ore_up_px > 0 ? y_ore_top - 6 : y_top - 6;
+    ctx.fillText(`m = ${C.m.toFixed(1)} м (←${C.ore_left} | ${C.ore_right}→)`, ox, label_y);
+    if(C.ore_up > 0){
+      ctx.font = '9px Inter,sans-serif';
+      ctx.fillText(`↑ ${C.ore_up} м от DP`, ox, label_y - 12);
+    }
+    ctx.font = '9px Inter,sans-serif';
+    if(ore_up_px > 0){
+      const frac = (H - C.ore_up) / H;
+      ctx.textAlign = 'left';
+      ctx.fillText(`${C.dip_foot}°`, (ox - ore_l_px - shift_foot*frac) - 20, y_ore_top + 15);
+      ctx.textAlign = 'right';
+      ctx.fillText(`${C.dip_hang}°`, (ox + ore_r_px + shift_hang*frac) + 20, y_ore_top + 15);
+    } else {
+      ctx.textAlign = 'left';
+      ctx.fillText(`${C.dip_foot}°`, top_left - 20, y_top + 15);
+      ctx.textAlign = 'right';
+      ctx.fillText(`${C.dip_hang}°`, top_right + 20, y_top + 15);
+    }
+    ctx.restore();
+    // Drawpoint marker
+    ctx.save();
+    ctx.fillStyle = col('--primary');
+    ctx.beginPath();
+    ctx.arc(ox, oy, 4, 0, Math.PI*2);
+    ctx.fill();
+    ctx.font = '9px Inter,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('DP', ox, oy + 14);
+    ctx.restore();
+  }
+
+  const y_hkas = oy - hkas*scale;
+  ctx.save();
+  ctx.setLineDash([3,3]);
+  ctx.strokeStyle = col('--error');
+  ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(pad,y_hkas); ctx.lineTo(cw-pad,y_hkas); ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle=col('--error');
+  ctx.font='11px Inter,sans-serif';
+  ctx.fillText(`h_кас = ${hkas.toFixed(1)} м`, cw-pad-110, y_hkas-4);
+
+  const yw = oy - 8;
+  ctx.strokeStyle = col('--primary'); ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.moveTo(ox-br,yw); ctx.lineTo(ox+br,yw);
+  ctx.moveTo(ox-br,yw-5); ctx.lineTo(ox-br,yw+5);
+  ctx.moveTo(ox+br,yw-5); ctx.lineTo(ox+br,yw+5);
+  ctx.stroke();
+  ctx.fillStyle=col('--primary');
+  ctx.font='bold 11px Inter,sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText(`2b = ${b2.toFixed(2)} м`, ox, yw+16);
+
+  ctx.fillStyle = col('--error');
+  ctx.beginPath(); ctx.arc(ox, oy, 6, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle=col('--text'); ctx.font='bold 11px Inter,sans-serif';
+  ctx.fillText('Drawpoint', ox+10, oy+4);
+
+  ctx.fillStyle=col('--muted'); ctx.textAlign='left';
+  ctx.strokeStyle=col('--muted'); ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.moveTo(pad-10, oy); ctx.lineTo(pad-10, oy-H*scale);
+  ctx.moveTo(pad-14,oy-5); ctx.lineTo(pad-10,oy); ctx.lineTo(pad-6,oy-5);
+  ctx.moveTo(pad-14,oy-H*scale+5); ctx.lineTo(pad-10,oy-H*scale); ctx.lineTo(pad-6,oy-H*scale+5);
+  ctx.stroke();
+  ctx.save(); ctx.translate(pad-22, oy-H*scale/2);
+  ctx.rotate(-Math.PI/2); ctx.textAlign='center';
+  ctx.fillText(`H = ${H} м`, 0, 0); ctx.restore();
+
+  ctx.textAlign='left';
+}
+
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+// TAB 1: Top view diamond
+function drawTop(){
+  const {ctx, W:cw, H:ch} = setupCanvas('c1');
+  const {W,L,l0,b2,b2r} = C;
+  ctx.clearRect(0,0,cw,ch);
+  ctx.fillStyle = col('--bg') || '#141312';
+  ctx.fillRect(0,0,cw,ch);
+
+  const pad=60;
+  const scaleX = (cw-pad*2)/(L*1.3);
+  const scaleY = (ch-pad*2)/(W*1.4);
+  const scale = Math.min(scaleX,scaleY);
+  const ox=cw/2, oy=ch/2;
+
+  const hw = W/2*scale, hl = L/2*scale;
+  ctx.save();
+  ctx.fillStyle='rgba(1,105,111,0.08)';
+  ctx.strokeStyle=col('--primary');
+  ctx.lineWidth=2.5;
+  ctx.beginPath();
+  ctx.moveTo(ox, oy-hw);
+  ctx.lineTo(ox+hl, oy);
+  ctx.lineTo(ox, oy+hw);
+  ctx.lineTo(ox-hl, oy);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
+
+  ctx.fillStyle=col('--muted'); ctx.font='11px Inter,sans-serif'; ctx.textAlign='center';
+  ctx.fillText(`L = ${L} м`, ox, oy+hw+20);
+  ctx.save(); ctx.translate(ox+hl+18, oy); ctx.rotate(-Math.PI/2);
+  ctx.fillText(`W = ${W} м`, 0, 0); ctx.restore();
+  ctx.textAlign='left';
+
+  const nDp = Math.max(1, Math.floor(L/l0));
+  const dpSpan = (nDp-1)*l0;
+  const dpStart = -dpSpan/2;
+
+  for(let i=0;i<nDp;i++){
+    const dx = (dpStart + i*l0)*scale;
+    const dpx = ox+dx, dpy = oy;
+
+    ctx.save();
+    ctx.strokeStyle=col('--primary');
+    ctx.fillStyle='rgba(1,105,111,0.12)';
+    ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.ellipse(dpx, dpy, b2/2*scale, b2/2*scale*0.8, 0, 0, Math.PI*2);
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.setLineDash([3,3]);
+    ctx.strokeStyle=col('--warning');
+    ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.ellipse(dpx, dpy, b2r/2*scale, b2r/2*scale*0.8, 0, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.fillStyle=col('--error');
+    ctx.beginPath(); ctx.arc(dpx, dpy, 4, 0, Math.PI*2); ctx.fill();
+
+    ctx.fillStyle=col('--muted'); ctx.font='10px Inter,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('DP'+(i+1), dpx, dpy+14);
+  }
+  ctx.textAlign='left';
+
+  ctx.font='11px Inter,sans-serif';
+  const lx=16, ly=ch-50;
+  ctx.fillStyle=col('--primary'); ctx.fillText('── Зона выпуска', lx, ly);
+  ctx.setLineDash([3,3]);
+  ctx.strokeStyle=col('--warning'); ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(lx,ly+14); ctx.lineTo(lx+24,ly+14); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle=col('--warning'); ctx.fillText('  Зона разрыхления', lx+4, ly+18);
+}
+
+// TAB 2: Dilution curve — with all 3 models shown
+function drawCurve(){
+  const {ctx, W:cw, H:ch} = setupCanvas('c2');
+  ctx.clearRect(0,0,cw,ch);
+  ctx.fillStyle = col('--bg') || '#141312';
+  ctx.fillRect(0,0,cw,ch);
+
+  const pad={top:36,right:120,bottom:50,left:60};
+  const gw=cw-pad.left-pad.right, gh=ch-pad.top-pad.bottom;
+  const {draw, dilModel} = C;
+
+  const dtPoints=[];
+  for(let d=0;d<=100;d++) dtPoints.push(calcAtDrawPct(d).dil_total_pct);
+  const maxDT = Math.max(...dtPoints, 65);
+  const axisMax = Math.ceil(maxDT/10)*10 + 5;
+
+  function px(d){ return pad.left + (d/100)*gw; }
+  function py(v){ return pad.top + gh - Math.min(v,axisMax)/axisMax*gh; }
+
+  // Grid
+  ctx.strokeStyle=col('--border'); ctx.lineWidth=0.5;
+  for(let x=0;x<=100;x+=20){
+    ctx.beginPath(); ctx.moveTo(px(x),pad.top); ctx.lineTo(px(x),pad.top+gh); ctx.stroke();
+    ctx.fillStyle=col('--muted'); ctx.font='11px Inter,sans-serif'; ctx.textAlign='center';
+    ctx.fillText(x+'%', px(x), pad.top+gh+16);
+  }
+  const ystep = axisMax<=70?10:20;
+  for(let y=0;y<=axisMax;y+=ystep){
+    ctx.beginPath(); ctx.moveTo(pad.left,py(y)); ctx.lineTo(pad.left+gw,py(y)); ctx.stroke();
+    ctx.fillStyle=col('--muted'); ctx.font='11px Inter,sans-serif'; ctx.textAlign='right';
+    ctx.fillText(y+'%', pad.left-6, py(y)+4);
+  }
+
+  ctx.fillStyle=col('--text'); ctx.font='bold 12px Inter,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('Draw, %', pad.left+gw/2, ch-6);
+  ctx.save(); ctx.translate(14,pad.top+gh/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('Разубоживание, %', 0, 0); ctx.restore(); ctx.textAlign='left';
+
+  // Zones
+  ctx.fillStyle='rgba(67,122,34,0.06)';
+  ctx.fillRect(pad.left, py(15), gw, py(0)-py(15));
+  ctx.fillStyle='rgba(150,66,25,0.06)';
+  ctx.fillRect(pad.left, py(30), gw, py(15)-py(30));
+
+  // Threshold labels
+  [[15,'rgba(67,122,34,0.7)','≤15% норма'],[30,'rgba(150,66,25,0.7)','≤30% предел']].forEach(([v,c,lbl])=>{
+    ctx.save(); ctx.setLineDash([3,3]); ctx.strokeStyle=c; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(pad.left,py(v)); ctx.lineTo(pad.left+gw,py(v)); ctx.stroke(); ctx.restore();
+    ctx.fillStyle=c; ctx.font='10px Inter,sans-serif';
+    ctx.fillText(lbl, pad.left+gw+4, py(v)+3);
+  });
+
+  // FEATURE 2: Draw ALL three D_base curves as thin dashed, active as thick solid
+  const models = ['piecewise','logistic','exponential'];
+  const modelColors = {piecewise:'rgba(120,120,120,0.4)', logistic:'rgba(100,160,200,0.4)', exponential:'rgba(200,140,80,0.4)'};
+  const modelLabels = {piecewise:'Кус.-лин.', logistic:'Логист.', exponential:'Экспон.'};
+
+  // Draw inactive models first (thin dashed)
+  models.forEach(mdl => {
+    if(mdl === dilModel) return; // skip active
+    ctx.save();
+    ctx.setLineDash([4,4]);
+    ctx.strokeStyle = modelColors[mdl];
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for(let d=0;d<=100;d++){
+      const val = getDilBase(d, mdl);
+      d===0 ? ctx.moveTo(px(d),py(val)) : ctx.lineTo(px(d),py(val));
+    }
+    ctx.stroke();
+    ctx.restore();
+  });
+
+  // Draw active D_base model (thick solid)
+  ctx.save();
+  ctx.strokeStyle = col('--muted');
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for(let d=0;d<=100;d++){
+    const val = getDilBase(d, dilModel);
+    d===0 ? ctx.moveTo(px(d),py(val)) : ctx.lineTo(px(d),py(val));
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  // D_total line (solid red)
+  ctx.save(); ctx.strokeStyle=col('--error'); ctx.lineWidth=2.5;
+  ctx.beginPath();
+  dtPoints.forEach((dt,d)=>{ d===0?ctx.moveTo(px(d),py(dt)):ctx.lineTo(px(d),py(dt)); });
+  ctx.stroke(); ctx.restore();
+
+  // FEATURE 3: Optimal draw vertical green dashed
+  if(C.optRec !== undefined && C.optRec < 100){
+    const optX = px(C.optRec);
+    ctx.save();
+    ctx.setLineDash([6,4]);
+    ctx.strokeStyle = col('--success');
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(optX, pad.top);
+    ctx.lineTo(optX, pad.top+gh);
+    ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = col('--success');
+    ctx.font = 'bold 10px Inter,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Опт. ${C.optRec}%`, optX, pad.top - 4);
+    ctx.textAlign = 'left';
+  }
+
+  // Current draw vertical
+  const mx=px(draw);
+  const curBase=getDilBase(draw, dilModel), curTotal=dtPoints[Math.round(draw)];
+  ctx.save(); ctx.setLineDash([4,3]); ctx.strokeStyle=col('--primary'); ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(mx,pad.top); ctx.lineTo(mx,pad.top+gh); ctx.stroke(); ctx.restore();
+
+  // Dots
+  ctx.fillStyle=col('--muted');
+  ctx.beginPath(); ctx.arc(mx,py(curBase),5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=col('--error');
+  ctx.beginPath(); ctx.arc(mx,py(curTotal),6,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='white'; ctx.beginPath(); ctx.arc(mx,py(curTotal),3,0,Math.PI*2); ctx.fill();
+
+  const lbx=mx+(draw>70?-160:8);
+  ctx.fillStyle=col('--muted'); ctx.font='11px Inter,sans-serif';
+  ctx.fillText(`D_base=${curBase.toFixed(1)}%`, lbx, py(curBase)-5);
+  ctx.fillStyle=col('--error'); ctx.font='bold 11px Inter,sans-serif';
+  ctx.fillText(`D_total=${curTotal.toFixed(1)}%`, lbx, py(curTotal)-5);
+
+  // Legend — extended
+  const llx=pad.left+10, lly=pad.top-20;
+  ctx.fillStyle=col('--error');
+  ctx.beginPath(); ctx.arc(llx+5,lly,5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=col('--text'); ctx.font='11px Inter,sans-serif';
+  ctx.fillText('D_total', llx+14, lly+4);
+
+  // Active model label
+  ctx.fillStyle=col('--muted');
+  ctx.fillText(`D_base: ${getModelName(dilModel)}`, llx+80, lly+4);
+
+  // Inactive model labels in legend
+  let legOff = 400;
+  models.forEach(mdl => {
+    if(mdl === dilModel) return;
+    ctx.save();
+    ctx.setLineDash([3,3]);
+    ctx.strokeStyle = modelColors[mdl];
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(llx+legOff,lly-1); ctx.lineTo(llx+legOff+18,lly-1); ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = modelColors[mdl];
+    ctx.font = '10px Inter,sans-serif';
+    ctx.fillText(modelLabels[mdl], llx+legOff+22, lly+3);
+    legOff += 80;
+  });
+
+  ctx.textAlign='left';
+}
+
+// FORMULAS
+function drawFlow(){
+  const {ctx, W:cw, H:ch} = setupCanvas('c3');
+  const {H,b2,b2r,draw,m,upper_mix_frac,ds} = C;
+  ctx.clearRect(0,0,cw,ch);
+  const pad=56, scale=Math.min((ch-pad*2)/H,(cw-pad*2)/(b2r*1.7));
+  const ox=cw/2, oy=ch-pad, ell_cy=oy-H*scale/2;
+  const br=b2/2*scale, br2=b2r/2*scale;
+
+  ctx.fillStyle = col('--bg') || '#141312';
+  ctx.fillRect(0,0,cw,ch);
+
+  ctx.fillStyle='rgba(130,100,60,0.10)';
+  ctx.fillRect(0,0,cw,oy-H*scale);
+
+  ctx.save();
+  ctx.setLineDash([5,4]);
+  ctx.strokeStyle = col('--warning');
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.ellipse(ox, ell_cy, br2, H/2*scale, 0, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.save();
+  ctx.strokeStyle = col('--primary');
+  ctx.lineWidth = 2.5;
+  ctx.fillStyle = 'rgba(1,105,111,0.08)';
+  ctx.beginPath();
+  ctx.ellipse(ox, ell_cy, br, H/2*scale, 0, 0, Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
+
+  if(C.m && b2/2 > 0){
+    const half_m = Math.min(C.m/2, b2/2) * scale;
+    ctx.save();
+    ctx.strokeStyle = col('--success') || '#437a22';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4,3]);
+    ctx.beginPath();
+    ctx.moveTo(ox - half_m, oy - H*scale);
+    ctx.lineTo(ox - half_m, oy);
+    ctx.moveTo(ox + half_m, oy - H*scale);
+    ctx.lineTo(ox + half_m, oy);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  const n = 22;
+  for(let i=0;i<n;i++){
+    const t=(i+0.5)/n;
+    const side=i%2===0?-1:1;
+    const y0 = oy - (H*(0.15 + 0.8*Math.random()))*scale;
+    const x0 = ox + side * (br*0.75*Math.random());
+    const y1 = oy - (H*(0.03 + 0.12*Math.random()))*scale;
+    const x1 = ox + side * (br*0.18*(1-t));
+    const alpha = 0.18 + 0.55*(draw/100) * (1-t*0.3);
+    ctx.strokeStyle = `rgba(1,105,111,${alpha.toFixed(3)})`;
+    ctx.lineWidth = 1 + (draw/100)*1.6;
+    ctx.beginPath();
+    ctx.moveTo(x0,y0);
+    ctx.quadraticCurveTo((x0+x1)/2 + side*12, (y0+y1)/2, x1, y1);
+    ctx.stroke();
+    ctx.fillStyle = `rgba(1,105,111,${Math.min(alpha+0.12,0.95).toFixed(3)})`;
+    ctx.beginPath();
+    ctx.arc(x1,y1,1.7 + (draw/100)*1.6,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  if(upper_mix_frac>0){
+    const nu = Math.max(6, Math.round(16*upper_mix_frac));
+    for(let i=0;i<nu;i++){
+      const side=i%2===0?-1:1;
+      const x0 = ox + side * (br2*0.88*Math.random());
+      const y0 = oy - H*scale - 10 - Math.random()*16;
+      const x1 = ox + side * (br*0.08*Math.random());
+      const y1 = oy - (H*scale*(0.1 + 0.12*Math.random()));
+      ctx.strokeStyle = `rgba(150,66,25,${(0.35 + 0.45*upper_mix_frac).toFixed(3)})`;
+      ctx.lineWidth = 1.1 + upper_mix_frac*1.5;
+      ctx.beginPath();
+      ctx.moveTo(x0,y0);
+      ctx.quadraticCurveTo((x0+x1)/2, (y0+y1)/2, x1, y1);
+      ctx.stroke();
+    }
+  }
+
+  // Side neighbor streams
+  const leftFrac = C.left_mix_frac || 0;
+  const rightFrac = C.right_mix_frac || 0;
+  if(leftFrac > 0){
+    const nl = Math.max(4, Math.round(10*leftFrac));
+    for(let i=0;i<nl;i++){
+      const x0 = ox - br2 - 8 - Math.random()*20;
+      const y0 = oy - (H*(0.2 + 0.6*Math.random()))*scale;
+      const x1 = ox - br*0.2*Math.random();
+      const y1 = oy - (H*(0.05 + 0.15*Math.random()))*scale;
+      ctx.strokeStyle = `rgba(110,142,251,${(0.3+0.5*leftFrac).toFixed(3)})`;
+      ctx.lineWidth = 1 + leftFrac*1.5;
+      ctx.beginPath(); ctx.moveTo(x0,y0);
+      ctx.quadraticCurveTo((x0+x1)/2-10, (y0+y1)/2, x1, y1);
+      ctx.stroke();
+    }
+  }
+  if(rightFrac > 0){
+    const nr = Math.max(4, Math.round(10*rightFrac));
+    for(let i=0;i<nr;i++){
+      const x0 = ox + br2 + 8 + Math.random()*20;
+      const y0 = oy - (H*(0.2 + 0.6*Math.random()))*scale;
+      const x1 = ox + br*0.2*Math.random();
+      const y1 = oy - (H*(0.05 + 0.15*Math.random()))*scale;
+      ctx.strokeStyle = `rgba(110,142,251,${(0.3+0.5*rightFrac).toFixed(3)})`;
+      ctx.lineWidth = 1 + rightFrac*1.5;
+      ctx.beginPath(); ctx.moveTo(x0,y0);
+      ctx.quadraticCurveTo((x0+x1)/2+10, (y0+y1)/2, x1, y1);
+      ctx.stroke();
+    }
+  }
+
+  ctx.fillStyle = col('--error');
+  ctx.beginPath(); ctx.arc(ox, oy, 6, 0, Math.PI*2); ctx.fill();
+
+  ctx.fillStyle = col('--text');
+  ctx.font = 'bold 12px Inter,sans-serif';
+  ctx.fillText('Схема движения руды внутри эллипсоида', 18, 24);
+  ctx.font = '11px Inter,sans-serif';
+  ctx.fillStyle = col('--muted');
+  ctx.fillText(`Синие струи — руда текущего блока, интенсивность зависит от Draw = ${draw}%`, 18, 44);
+  ctx.fillText(`Коричневые струи — влияние верхнего подэтажа, начинается с Draw ${ds}%`, 18, 60);
+  ctx.fillText(`Фиолетовые струи — влияние соседних камер (лево/право)`, 18, 76);
+  ctx.fillText(`Пунктирные зелёные линии — границы мощности рудного тела m = ${C.m.toFixed(1)} м`, 18, 92);
+
+  const bx = 18, by = ch - 82;
+  ctx.strokeStyle='rgba(1,105,111,0.8)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx+28,by); ctx.stroke();
+  ctx.fillStyle=col('--muted'); ctx.fillText('Текущий поток руды', bx+34, by+4);
+  ctx.strokeStyle='rgba(150,66,25,0.8)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(bx,by+18); ctx.lineTo(bx+28,by+18); ctx.stroke();
+  ctx.fillText('Примесь / влияние верхнего подэтажа', bx+34, by+22);
+  ctx.strokeStyle='rgba(110,142,251,0.8)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(bx,by+36); ctx.lineTo(bx+28,by+36); ctx.stroke();
+  ctx.fillText('Соседние камеры (лево/право)', bx+34, by+40);
+}
+
+function updateFormulas(){
+  const {H,l0,p,Ve,Vr,b2,b2r,hkas,rho,T_ell,ton,draw,cuEq,K_AU,K_AG,
+         dil_capped,dil_geom_pct,
+         upper_in_flow,upper_ton_k,upper_mix_frac,upper_cueq_v,ds,
+         left_ton_k, left_cueq_v, left_ds, left_mix_frac, left_in_flow,
+         right_ton_k, right_cueq_v, right_ds, right_mix_frac, right_in_flow,
+         T_geom_waste,T_base_waste,T_waste_total,T_total_flow,dil_total_pct,cueq_fact,
+         m,ore_left,ore_right,ore_up,dip_foot,dip_hang,dip_factor,
+         half_b,ore_left_eff,ore_right_eff,overshoot_left,overshoot_right,overshoot_up,
+         a,b,area_ell,spacing,shape_k,vol_cubes,area_plan_excel,a_excel,b_excel,
+         dilModel} = C;
+
+  function row(name, expr, result, note='', hi=false){
+    return `<div class="frow${hi?' frow-hi':''}">
+      <span class="fname">${name}</span>
+      <span class="fexpr">${expr}</span>
+      <span class="fresult">${result}</span>
+    </div>${note?`<div class="fnote">${note}</div>`:''}`;
+  }
+  function sec(cls, title){ return `<div class="formula-section-title ${cls}">${title}</div>`; }
+
+  const drawBranch = dilModel === 'piecewise'
+    ? (draw<=40 ? `draw ≤ 40 → ${draw} × 0.1` : draw<=70 ? `40 < draw ≤ 70 → 4 + (${draw}−40) × 0.6` : `draw > 70 → 22 + (${draw}−70) × 1.3`)
+    : dilModel === 'logistic'
+    ? `65 / (1 + exp(-0.08×(${draw}−55)))`
+    : `min(1.5 × exp(0.04 × ${draw}) − 1.5, 65)`;
+
+  const domLabel = T_base_waste >= T_geom_waste
+    ? `T_база (${T_base_waste.toFixed(0)} т) ≥ T_геом (${T_geom_waste.toFixed(0)} т) → доминирует база`
+    : `T_геом (${T_geom_waste.toFixed(0)} т) > T_база (${T_base_waste.toFixed(0)} т) → доминирует геометрия`;
+
+  const html = [
+    sec('fsec-geo','1. Геометрия эллипсоида выпуска'),
+    row('Объём V_э', `π/3 × ${p.toFixed(2)} × ${H}²`, Ve.toFixed(0)+' м³'),
+    row('Объём разрыхления V_р', `15 × ${Ve.toFixed(0)}`, Vr.toFixed(0)+' м³'),
+    row('Ширина зоны 2b', `2 × √(0.5 × ${p.toFixed(2)} × ${H})`, b2.toFixed(2)+' м'),
+    row('Ширина разрыхления 2b₁', `2 × √(2.46 × ${p.toFixed(2)} × ${H})`, b2r.toFixed(2)+' м'),
+    row('Высота касания h_кас', `${l0}² / (2 × ${p.toFixed(2)})`, hkas.toFixed(2)+' м'),
+    row('Тоннаж эллипсоида T_эл', `${Ve.toFixed(0)} × ${rho}`, T_ell.toFixed(0)+' т'),
+    row('Большая полуось a', `H/2 + p = ${H}/2 + ${p.toFixed(2)}`, a.toFixed(2)+' м'),
+    row('Малая полуось b', `2b / 2 = ${b2.toFixed(2)} / 2`, b.toFixed(2)+' м'),
+    row('Площадь эллипса', `π × ${a.toFixed(2)} × ${b.toFixed(2)}`, area_ell.toFixed(1)+' м²'),
+
+    sec('fsec-base',`2. D_base — ${getModelName(dilModel)}`),
+    row('Модель', getModelFormula(dilModel), '', `Активная модель: ${getModelName(dilModel)}`),
+    row('D_base', drawBranch, dil_capped.toFixed(1)+'%'),
+    row('T_база', `${(ton/1000).toFixed(2)} тыс.т × ${dil_capped.toFixed(1)}% / 100`, T_base_waste.toFixed(0)+' т'),
+
+    sec('fsec-geom','3. Конструктивное (D_геом, асимметр.)'),
+    row('Положение рудного тела', `← ${ore_left} м | DP | ${ore_right} м →` + (ore_up > 0 ? ` | ↑ ${ore_up} м` : ''), `m = ${m.toFixed(1)} м`,
+      `Углы: лежачий ${dip_foot}°, висячий ${dip_hang}°. dip_factor = ${dip_factor.toFixed(2)}`),
+    row('Эфф. граница лево', `${ore_left} / ${dip_factor.toFixed(2)}`, ore_left_eff.toFixed(2)+' м'),
+    row('Эфф. граница право', `${ore_right} / ${dip_factor.toFixed(2)}`, ore_right_eff.toFixed(2)+' м'),
+    row('Выход лево', `max(b − ore_left_eff, 0) = max(${half_b.toFixed(2)} − ${ore_left_eff.toFixed(2)}, 0)`, overshoot_left.toFixed(2)+' м',
+      overshoot_left > 0 ? 'Эллипсоид выходит за левую границу!' : ''),
+    row('Выход право', `max(b − ore_right_eff, 0) = max(${half_b.toFixed(2)} − ${ore_right_eff.toFixed(2)}, 0)`, overshoot_right.toFixed(2)+' м',
+      overshoot_right > 0 ? 'Эллипсоид выходит за правую границу!' : ''),
+    ore_up > 0 ? row('Выход вверх', `max(a − (H − ore_up), 0) = max(${a.toFixed(2)} − ${(H-ore_up).toFixed(2)}, 0)`, overshoot_up.toFixed(2)+' м') : '',
+    row('D_геом', `(сумма выходов) / (2b + a) × 100`, dil_geom_pct.toFixed(1)+'%'),
+    row('T_геом', `${(ton/1000).toFixed(2)} тыс.т × ${dil_geom_pct.toFixed(1)}% / 100`, T_geom_waste.toFixed(0)+' т'),
+
+    sec('fsec-upper','4. Вышележащий подэтаж'),
+    row('Draw_start', `${ds}%`, draw>ds ? `draw (${draw}%) > порога → входит` : `не входит`),
+    row('F_upper', `(${draw} − ${ds}) / (100 − ${ds})`, (upper_mix_frac*100).toFixed(0)+'%'),
+    row('T_верхний', `${upper_ton_k.toFixed(0)} × ${(upper_mix_frac*100).toFixed(0)}%`, upper_in_flow.toFixed(0)+' т'),
+
+    // FEATURE 4: Neighbors in formulas
+    sec('fsec-neighbor','4a. Соседние камеры'),
+    row('Левая камера', `тоннаж ${left_ton_k.toFixed(0)} т, start ${left_ds}%, frac ${(left_mix_frac*100).toFixed(0)}%×0.5`, left_in_flow.toFixed(0)+' т',
+      'Боковое влияние = 0.5 × линейная доля'),
+    row('Правая камера', `тоннаж ${right_ton_k.toFixed(0)} т, start ${right_ds}%, frac ${(right_mix_frac*100).toFixed(0)}%×0.5`, right_in_flow.toFixed(0)+' т'),
+
+    sec('fsec-total','5. Суммарный поток — итог'),
+    row('T_порода = max(T_база, T_геом)', `max(${T_base_waste.toFixed(0)}, ${T_geom_waste.toFixed(0)})`,
+      Math.max(T_base_waste, T_geom_waste).toFixed(0)+' т', domLabel),
+    row('T_разбавка = max(…) + верх + соседи',
+      `${Math.max(T_base_waste,T_geom_waste).toFixed(0)} + ${upper_in_flow.toFixed(0)} + ${left_in_flow.toFixed(0)} + ${right_in_flow.toFixed(0)}`,
+      T_waste_total.toFixed(0)+' т', null, true),
+    row('T_total = T_руда + T_разбавка',
+      `${ton.toFixed(0)} + ${T_waste_total.toFixed(0)}`,
+      T_total_flow.toFixed(0)+' т', null, true),
+    row('D_total',
+      `${T_waste_total.toFixed(0)} / ${T_total_flow.toFixed(0)} × 100`,
+      dil_total_pct.toFixed(2)+'%', null, true),
+    row('CuEq_факт',
+      `(${ton.toFixed(0)}×${cuEq.toFixed(3)} + ${upper_in_flow.toFixed(0)}×${upper_cueq_v.toFixed(3)} + ${left_in_flow.toFixed(0)}×${left_cueq_v.toFixed(3)} + ${right_in_flow.toFixed(0)}×${right_cueq_v.toFixed(3)}) / ${T_total_flow.toFixed(0)}`,
+      cueq_fact.toFixed(4)+'%', `k_Au=${K_AU}, k_Ag=${K_AG}`, true),
+
+    // FEATURE 5: Economics in formulas
+    sec('fsec-econ','5a. Экономика'),
+    row('Выручка (gross) на тонну', `Cu×P_Cu×Rec + Au/31.1×P_Au×Rec + Ag/31.1×P_Ag×Rec`, (C.grossFact||0).toFixed(1)+' $/т'),
+    row('Маржа на тонну', `gross − OPEX`, (C.margin||0).toFixed(1)+' $/т'),
+    row('Потеря выручки от разубоживания', `gross_block − gross_fact`, (C.revLoss||0).toFixed(1)+' $/т'),
+
+    sec('fsec-cad','6. Режим AutoCAD / Excel'),
+    row('Объём в кубах', `T / ρ = ${ton.toFixed(0)} / ${rho.toFixed(2)}`, vol_cubes.toFixed(1)+' м³'),
+    row('Площадь AutoCAD', `V_куб / шаг = ${vol_cubes.toFixed(1)} / ${spacing.toFixed(2)}`, area_plan_excel.toFixed(1)+' м²'),
+    row('b (план)', `√(S / (π × 3.97))`, b_excel.toFixed(2)+' м'),
+    row('a (план)', `3.97 × ${b_excel.toFixed(2)}`, a_excel.toFixed(2)+' м'),
+    row('k', `справочный`, shape_k.toFixed(5)),
+  ].join('');
+
+  document.getElementById('formulas').innerHTML = html;
+}
+
+// ── TAB 5: STEP-BY-STEP DRAW PROGRESSION ─────────────────────────
+function calcAtDrawPct(drawPct){
+  const {p,H,rho,ton,m,ore_left,ore_right,ore_up,dip_avg,dip_factor:df,
+         upper_ton_k,upper_cueq_v,cuEq,ds,
+         left_ton_k,left_cueq_v,left_ds,right_ton_k,right_cueq_v,right_ds,
+         dilModel,K_AU,K_AG} = C;
+  const model = dilModel || 'piecewise';
+  const p_safe = Math.max(p, 0.01);
+  const b2 = 2*Math.sqrt(0.5*p_safe*H);
+  const dip_factor = df || (90 / Math.max(dip_avg, 30));
+  const half_b = b2 / 2;
+  const a_loc = H/2 + p_safe;
+  const ol_eff = ore_left / dip_factor;
+  const or_eff = ore_right / dip_factor;
+  const ov_left = Math.max(half_b - ol_eff, 0);
+  const ov_right = Math.max(half_b - or_eff, 0);
+  const ov_up = (ore_up > 0 && a_loc > 0) ? Math.max(a_loc - (H - ore_up), 0) : 0;
+  const total_ov = ov_left + ov_right + ov_up;
+  const dil_geom_pct = total_ov > 0 ? Math.min(total_ov / (half_b*2 + a_loc) * 100, 60) : 0;
+
+  // Upper sublevel
+  const upper_mix_frac = (upper_ton_k > 0 && drawPct > ds)
+    ? Math.min((drawPct - ds)/(100 - ds), 1.0) : 0;
+  const upper_in_flow = upper_ton_k * upper_mix_frac;
+
+  // Neighbors
+  const left_mix_frac = (left_ton_k > 0 && drawPct > left_ds)
+    ? Math.min((drawPct - left_ds)/(100 - left_ds), 1.0) * 0.5 : 0;
+  const left_in_flow = left_ton_k * left_mix_frac;
+  const right_mix_frac = (right_ton_k > 0 && drawPct > right_ds)
+    ? Math.min((drawPct - right_ds)/(100 - right_ds), 1.0) * 0.5 : 0;
+  const right_in_flow = right_ton_k * right_mix_frac;
+
+  const d = drawPct;
+  const dil_base = getDilBase(d, model);
+
+  const T_geom_waste  = ton * (dil_geom_pct / 100);
+  const T_base_waste  = ton * (dil_base / 100);
+  const T_waste_total = Math.max(T_geom_waste, T_base_waste) + upper_in_flow + left_in_flow + right_in_flow;
+  const T_total_flow  = ton + T_waste_total;
+  const dil_total_pct = T_total_flow > 0
+    ? Math.min(T_waste_total / T_total_flow * 100, 90) : 0;
+
+  const cueq_fact = T_total_flow > 0
+    ? (ton * cuEq + upper_in_flow * upper_cueq_v + left_in_flow * left_cueq_v + right_in_flow * right_cueq_v) / T_total_flow
+    : cuEq;
+
+  // Factual metals for economic calc
+  const cu_val = v('cu'), au_val = v('au'), ag_val = v('ag');
+  const cu_f = T_total_flow > 0
+    ? (ton*cu_val + upper_in_flow*v('upper_cu') + left_in_flow*v('left_cu') + right_in_flow*v('right_cu')) / T_total_flow : cu_val;
+  const au_f = T_total_flow > 0
+    ? (ton*au_val + upper_in_flow*v('upper_au') + left_in_flow*v('left_au') + right_in_flow*v('right_au')) / T_total_flow : au_val;
+  const ag_f = T_total_flow > 0
+    ? (ton*ag_val + upper_in_flow*v('upper_ag') + left_in_flow*v('left_ag') + right_in_flow*v('right_ag')) / T_total_flow : ag_val;
+
+  // Revenue for this step
+  const price_cu = v('price_cu'), price_au = v('price_au'), price_ag = v('price_ag');
+  const rec_cu = v('rec_cu')/100, rec_au = v('rec_au')/100, rec_ag = v('rec_ag')/100;
+  const opex_val = v('opex');
+  const gross = cu_f/100*price_cu*rec_cu + au_f/31.1035*price_au*rec_au + ag_f/31.1035*price_ag*rec_ag;
+  const margin = gross - opex_val;
+
+  return {drawPct, T_drawn: ton*(drawPct/100), dil_base, dil_geom_pct,
+          upper_in_flow, left_in_flow, right_in_flow,
+          dil_total_pct, cueq_fact, margin};
+}
+
+function drawStepTab(){
+  const steps = [];
+  for(let d=0; d<=100; d+=5) steps.push(calcAtDrawPct(d));
+
+  const {draw, cuEq, optRec} = C;
+  const cuEq0 = cuEq > 0 ? cuEq : 1;
+
+  const {ctx, W:cw, H:ch} = setupCanvas('c5');
+  ctx.clearRect(0,0,cw,ch);
+  ctx.fillStyle = col('--bg') || '#141312';
+  ctx.fillRect(0,0,cw,ch);
+
+  const pad = {top:28, right:90, bottom:44, left:60};
+  const gw = cw - pad.left - pad.right;
+  const gh = ch - pad.top - pad.bottom;
+
+  const maxDil = Math.max(...steps.map(s=>s.dil_total_pct), 20);
+  const maxDilAxis = Math.ceil(maxDil/10)*10 + 10;
+  const minCuEq = Math.min(...steps.map(s=>s.cueq_fact));
+  const maxCuEq = cuEq0 * 1.04;
+  const cuEqRange = Math.max(maxCuEq - minCuEq, 0.05);
+  const cuEqMin = minCuEq - cuEqRange * 0.08;
+  const cuEqMax = maxCuEq + cuEqRange * 0.05;
+
+  function px(d){ return pad.left + (d/100)*gw; }
+  function pyDil(v){ return pad.top + gh - Math.min(v, maxDilAxis)/maxDilAxis*gh; }
+  function pyCuEq(v){ return pad.top + gh - Math.max(0,(v-cuEqMin)/(cuEqMax-cuEqMin))*gh; }
+
+  ctx.strokeStyle = col('--border'); ctx.lineWidth = 0.5;
+  for(let d=0;d<=100;d+=10){
+    ctx.beginPath(); ctx.moveTo(px(d),pad.top); ctx.lineTo(px(d),pad.top+gh); ctx.stroke();
+    ctx.fillStyle = col('--faint'); ctx.font='10px Inter,sans-serif'; ctx.textAlign='center';
+    ctx.fillText(d+'%', px(d), pad.top+gh+14);
+  }
+  const dilTicks = [];
+  for(let v=0;v<=maxDilAxis;v+=10) dilTicks.push(v);
+  dilTicks.forEach(v=>{
+    const y = pyDil(v);
+    ctx.beginPath(); ctx.moveTo(pad.left,y); ctx.lineTo(pad.left+gw,y); ctx.stroke();
+    ctx.fillStyle=col('--muted'); ctx.font='10px Inter,sans-serif'; ctx.textAlign='right';
+    ctx.fillText(v+'%', pad.left-5, y+3);
+  });
+
+  const nCuTicks = 5;
+  for(let i=0;i<=nCuTicks;i++){
+    const v = cuEqMin + (cuEqMax-cuEqMin)*i/nCuTicks;
+    const y = pyCuEq(v);
+    ctx.fillStyle = '#d19900'; ctx.font='10px Inter,sans-serif'; ctx.textAlign='left';
+    ctx.fillText(v.toFixed(3)+'%', pad.left+gw+5, y+3);
+  }
+
+  ctx.fillStyle=col('--text'); ctx.font='bold 11px Inter,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('Draw, %', pad.left+gw/2, pad.top+gh+30);
+  ctx.save(); ctx.translate(12, pad.top+gh/2); ctx.rotate(-Math.PI/2);
+  ctx.fillStyle=col('--error'); ctx.fillText('Разубоживание %', 0, 0); ctx.restore();
+  ctx.save(); ctx.translate(cw-8, pad.top+gh/2); ctx.rotate(Math.PI/2);
+  ctx.fillStyle='#d19900'; ctx.fillText('CuEq факт, %', 0, 0); ctx.restore();
+  ctx.textAlign='left';
+
+  ctx.fillStyle='rgba(67,122,34,0.05)';
+  ctx.fillRect(pad.left, pyDil(20), gw, pyDil(0)-pyDil(20));
+  ctx.fillStyle='rgba(150,66,25,0.05)';
+  ctx.fillRect(pad.left, pyDil(35), gw, pyDil(20)-pyDil(35));
+
+  // D_base line (dashed)
+  ctx.save(); ctx.setLineDash([4,4]); ctx.strokeStyle=col('--muted'); ctx.lineWidth=1.2;
+  ctx.beginPath();
+  steps.forEach((s,i)=>{ i===0 ? ctx.moveTo(px(s.drawPct),pyDil(s.dil_base)) : ctx.lineTo(px(s.drawPct),pyDil(s.dil_base)); });
+  ctx.stroke(); ctx.restore();
+
+  // D_total line
+  ctx.save(); ctx.strokeStyle=col('--error'); ctx.lineWidth=2.2;
+  ctx.beginPath();
+  steps.forEach((s,i)=>{ i===0 ? ctx.moveTo(px(s.drawPct),pyDil(s.dil_total_pct)) : ctx.lineTo(px(s.drawPct),pyDil(s.dil_total_pct)); });
+  ctx.stroke(); ctx.restore();
+
+  steps.forEach(s=>{
+    const x=px(s.drawPct), y=pyDil(s.dil_total_pct);
+    ctx.fillStyle=col('--error');
+    ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fill();
+  });
+
+  // CuEq line
+  ctx.save(); ctx.strokeStyle='#d19900'; ctx.lineWidth=2.5;
+  ctx.beginPath();
+  steps.forEach((s,i)=>{ i===0 ? ctx.moveTo(px(s.drawPct),pyCuEq(s.cueq_fact)) : ctx.lineTo(px(s.drawPct),pyCuEq(s.cueq_fact)); });
+  ctx.stroke(); ctx.restore();
+
+  steps.forEach(s=>{
+    const x=px(s.drawPct), y=pyCuEq(s.cueq_fact);
+    ctx.fillStyle='#d19900';
+    ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fill();
+  });
+
+  // FEATURE 3: Optimal draw vertical green dashed on step chart
+  if(optRec !== undefined && optRec < 100){
+    const optX = px(optRec);
+    ctx.save();
+    ctx.setLineDash([6,4]);
+    ctx.strokeStyle = col('--success');
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(optX, pad.top);
+    ctx.lineTo(optX, pad.top+gh);
+    ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = col('--success');
+    ctx.font = 'bold 10px Inter,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Опт. ${optRec}%`, optX, pad.top - 4);
+    ctx.textAlign = 'left';
+  }
+
+  // Current draw marker
+  const curStep = calcAtDrawPct(draw);
+  const mx = px(draw);
+  ctx.save(); ctx.setLineDash([3,3]); ctx.strokeStyle=col('--primary'); ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(mx,pad.top); ctx.lineTo(mx,pad.top+gh); ctx.stroke(); ctx.restore();
+
+  ctx.fillStyle=col('--primary');
+  ctx.beginPath(); ctx.arc(mx, pyDil(curStep.dil_total_pct), 6, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle='white'; ctx.beginPath(); ctx.arc(mx, pyDil(curStep.dil_total_pct), 3, 0, Math.PI*2); ctx.fill();
+
+  ctx.fillStyle=col('--primary');
+  ctx.beginPath(); ctx.arc(mx, pyCuEq(curStep.cueq_fact), 6, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle='white'; ctx.beginPath(); ctx.arc(mx, pyCuEq(curStep.cueq_fact), 3, 0, Math.PI*2); ctx.fill();
+
+  // Legend
+  const lx=pad.left+8, ly=pad.top+14;
+  [[col('--error'), 'D_total'],
+   [col('--muted'), 'D_base'],
+   ['#d19900',      'CuEq факт'],
+   [col('--primary'),'Текущий draw'],
+   [col('--success'),'Оптимальный']].forEach(([c,label],i)=>{
+    const lxo=lx+i*140;
+    ctx.fillStyle=c; ctx.beginPath(); ctx.arc(lxo+5,ly,4,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=col('--text'); ctx.font='10px Inter,sans-serif'; ctx.textAlign='left';
+    ctx.fillText(label, lxo+13, ly+3);
+  });
+
+  ctx.fillStyle=col('--muted'); ctx.font='bold 11px Inter,sans-serif'; ctx.textAlign='center';
+  ctx.fillText(`График — текущий draw: ${draw}%`, pad.left+gw/2, 12);
+
+  // ── Fill HTML table ──────────────────────────────────────────
+  const tbody = document.getElementById('step-tbody');
+  // Find the optimal step row (closest 5% step)
+  const optStep5 = optRec !== undefined ? Math.round(optRec / 5) * 5 : -1;
+
+  const rows = steps.map(s=>{
+    const loss = cuEq0 > 0 ? ((cuEq0 - s.cueq_fact)/cuEq0*100) : 0;
+    const isCurrent = (s.drawPct === Math.round(draw/5)*5);
+    const isOptimal = (s.drawPct === optStep5 && optRec < 100);
+    const dilClass = s.dil_total_pct < 15 ? 'cell-good' : s.dil_total_pct < 30 ? 'cell-warn' : 'cell-danger';
+    const cueqClass = loss < 10 ? 'cell-good' : loss < 25 ? 'cell-warn' : 'cell-danger';
+    let rowClass = isCurrent ? 'current-draw' : (s.dil_total_pct >= 30 ? 'danger-row' : s.dil_total_pct >= 15 ? 'warn-row' : '');
+    if(isOptimal) rowClass += ' optimal-row';
+    const marginClass = s.margin > 0 ? 'cell-good' : 'cell-danger';
+    return `<tr class="${rowClass}">
+      <td>${s.drawPct}%${isCurrent?' ◀':''}${isOptimal?' ★':''}</td>
+      <td>${s.T_drawn.toFixed(0)}</td>
+      <td>${s.dil_base.toFixed(1)}</td>
+      <td>${s.dil_geom_pct.toFixed(1)}</td>
+      <td>${s.upper_in_flow > 0 ? s.upper_in_flow.toFixed(0) : '—'}</td>
+      <td>${s.left_in_flow > 0 ? s.left_in_flow.toFixed(0) : '—'}</td>
+      <td>${s.right_in_flow > 0 ? s.right_in_flow.toFixed(0) : '—'}</td>
+      <td class="${dilClass}">${s.dil_total_pct.toFixed(1)}</td>
+      <td style="color:#d19900;font-weight:700">${s.cueq_fact.toFixed(3)}</td>
+      <td class="${cueqClass}">${loss.toFixed(1)}</td>
+      <td class="${marginClass}">${s.margin.toFixed(1)}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = rows.join('');
+}
+
+// TABS
+function setTab(i, el){
+  activeTab=i;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab'+i).classList.add('active');
+  setTimeout(()=>draw(),50);
+}
+
+// THEME
+let dark = true;
+function toggleTheme(){
+  dark=!dark;
+  document.documentElement.setAttribute('data-theme', dark?'dark':'light');
+  const btn=document.getElementById('themeBtn');
+  btn.innerHTML = dark
+    ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+    : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>';
+  setTimeout(()=>draw(), 80);
+}
+
+// CSV EXPORT
+document.getElementById('export-csv-btn').addEventListener('click', function(){
+  const steps = [];
+  for(let d=0; d<=100; d+=5) steps.push(calcAtDrawPct(d));
+  const cuEq0 = C.cuEq > 0 ? C.cuEq : 1;
+  let csv = 'Draw%;T_выпущено_т;D_base%;D_геом%;Верхний_т;Левая_т;Правая_т;D_total%;CuEq_факт%;Потеря_CuEq%;Маржа_$/т\n';
+  steps.forEach(s=>{
+    const loss = cuEq0 > 0 ? ((cuEq0 - s.cueq_fact)/cuEq0*100) : 0;
+    csv += `${s.drawPct};${s.T_drawn.toFixed(0)};${s.dil_base.toFixed(1)};${s.dil_geom_pct.toFixed(1)};${s.upper_in_flow.toFixed(0)};${s.left_in_flow.toFixed(0)};${s.right_in_flow.toFixed(0)};${s.dil_total_pct.toFixed(1)};${s.cueq_fact.toFixed(3)};${loss.toFixed(1)};${s.margin.toFixed(1)}\n`;
+  });
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'uflow_v13_steps.csv';
+  a.click();
+});
+
+window.addEventListener('resize', ()=>{ draw(); });
+
+// URL PARAMS (from chamber passport)
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const fields = {H:'H',W:'W',L:'L',l0:'l0',p:'p',rho:'rho',cu:'cu',au:'au',ag:'ag',tonnage:'tonnage'};
+  let changed = false;
+  for(const [param, id] of Object.entries(fields)){
+    if(params.has(param)){
+      const el = document.getElementById(id);
+      if(el){ el.value = params.get(param); changed = true; }
+    }
+  }
+})();
+
+// INIT
+calc();
+draw();
+</script>
+</body>
+</html>

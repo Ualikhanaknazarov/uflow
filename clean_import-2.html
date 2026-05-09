@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UFlow — Импорт данных</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+:root,[data-theme="light"]{
+  --bg:#f7f6f2;--surface:#f9f8f5;--surface-2:#fbfbf9;--surface-off:#f0ede8;
+  --border:rgba(40,37,29,0.12);--text:#28251d;--muted:#7a7974;--faint:#bab9b4;
+  --primary:#01696f;--primary-h:#0c4e54;--primary-hi:#cedcd8;
+  --warning:#964219;--error:#a12c7b;--success:#437a22;
+  --shadow:0 2px 8px rgba(40,37,29,0.08),0 8px 24px rgba(40,37,29,0.05);
+  --r:0.5rem;--font:'Inter',sans-serif;
+}
+[data-theme="dark"]{
+  --bg:#141312;--surface:#1c1b19;--surface-2:#222120;--surface-off:#272523;
+  --border:rgba(255,255,255,0.08);--text:#cdccca;--muted:#797876;--faint:#4a4948;
+  --primary:#4f98a3;--primary-h:#227f8b;--primary-hi:#1f3a3c;
+  --warning:#bb653b;--error:#d163a7;--success:#6daa45;
+  --shadow:0 2px 8px rgba(0,0,0,0.3),0 8px 24px rgba(0,0,0,0.2);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased;scroll-behavior:smooth}
+body{font-family:var(--font);font-size:15px;background:var(--bg);color:var(--text);min-height:100dvh;display:flex;flex-direction:column}
+input,button,select{font:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none}
+
+/* NAV BAR */
+.top-nav{display:flex;align-items:center;gap:4px;padding:6px 20px;background:var(--surface-2);border-bottom:1px solid var(--border);font-size:12px}
+.top-nav a{color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:var(--r);transition:all 180ms ease;font-weight:500}
+.top-nav a:hover{color:var(--text);background:var(--surface-off)}
+.top-nav a.active{color:var(--primary);background:var(--primary-hi);font-weight:600}
+
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--surface)}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;letter-spacing:-0.01em}
+.logo svg{color:var(--primary)}
+.theme-btn{width:36px;height:36px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--muted);transition:all 180ms ease}
+.theme-btn:hover{color:var(--text);border-color:var(--primary)}
+
+/* CONTENT */
+.content{max-width:1200px;margin:0 auto;padding:24px 20px;width:100%;flex:1}
+.page-title{font-size:20px;font-weight:700;letter-spacing:-0.02em;margin-bottom:4px}
+.page-subtitle{font-size:13px;color:var(--muted);margin-bottom:24px}
+
+/* DROP ZONE */
+.drop-zone{border:2px dashed var(--border);border-radius:var(--r);padding:48px 24px;text-align:center;transition:all 250ms ease;cursor:pointer;background:var(--surface)}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--primary);background:var(--primary-hi)}
+.drop-zone-icon{margin-bottom:12px;color:var(--muted)}
+.drop-zone-title{font-size:16px;font-weight:600;margin-bottom:6px}
+.drop-zone-hint{font-size:12px;color:var(--muted)}
+.drop-zone input[type="file"]{display:none}
+
+/* SECTION */
+.section{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-top:20px}
+.section-title{font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;max-height:460px;overflow-y:auto;border-radius:var(--r);border:1px solid var(--border)}
+.data-table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+.data-table thead th{position:sticky;top:0;background:var(--surface-off);z-index:1;text-align:left;padding:8px 10px;color:var(--muted);font-weight:600;font-size:11px;letter-spacing:0.04em;border-bottom:2px solid var(--border);white-space:nowrap}
+.data-table tbody td{padding:6px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.data-table tbody tr:hover{background:var(--surface-2)}
+
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:12px}
+.kpi{background:var(--surface-2);border-radius:calc(var(--r) - 2px);padding:12px;border:1px solid var(--border)}
+.kpi-label{font-size:10px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px}
+.kpi-value{font-size:20px;font-weight:700;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;line-height:1}
+.kpi.warn .kpi-value{color:var(--warning)}
+.kpi.ok .kpi-value{color:var(--success)}
+
+/* QUALITY */
+.quality-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:12px}
+.quality-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface-2);border-radius:var(--r);border:1px solid var(--border)}
+.quality-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.quality-dot.green{background:var(--success)}
+.quality-dot.yellow{background:var(--warning)}
+.quality-dot.red{background:var(--error)}
+.quality-text{font-size:12px;color:var(--text)}
+.quality-count{font-size:14px;font-weight:700;margin-left:auto}
+
+/* BTN */
+.btn{padding:8px 16px;border-radius:var(--r);font-size:13px;font-weight:600;transition:all 180ms ease;display:inline-flex;align-items:center;gap:6px}
+.btn.primary{background:var(--primary);color:white}
+.btn.primary:hover{background:var(--primary-h)}
+.btn.primary:disabled{opacity:0.4;cursor:not-allowed}
+.btn.danger{background:var(--error);color:white}
+.btn.danger:hover{opacity:0.85}
+.btn.outline{border:1px solid var(--border);color:var(--muted)}
+.btn.outline:hover{border-color:var(--primary);color:var(--text)}
+.btn-row{display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--success);color:white;padding:12px 20px;border-radius:var(--r);font-size:13px;font-weight:600;box-shadow:var(--shadow);transform:translateY(100px);opacity:0;transition:all 300ms ease;z-index:1000}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.error{background:var(--error)}
+
+/* CURRENT DATA */
+.current-data{margin-top:20px}
+.empty-state{text-align:center;padding:32px;color:var(--muted);font-size:13px}
+
+@media(max-width:600px){
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .content{padding:16px 12px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="top-nav">
+  <a href="index.html">Калькулятор</a>
+  <a href="chamber.html">Паспорт камер</a>
+  <a href="import.html" class="active">Импорт данных</a>
+</nav>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <ellipse cx="12" cy="12" rx="4" ry="10" opacity=".4"/>
+      <ellipse cx="12" cy="12" rx="10" ry="4" opacity=".4"/>
+      <ellipse cx="12" cy="12" rx="7" ry="10"/>
+    </svg>
+    UFlow — Импорт данных
+  </div>
+  <button class="theme-btn" onclick="toggleTheme()" aria-label="Тема" id="themeBtn">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+  <h1 class="page-title">Импорт данных</h1>
+  <p class="page-subtitle">Загрузите Excel-файл с данными учёта выпуска руды (формат Шахта)</p>
+
+  <!-- DROP ZONE -->
+  <div class="drop-zone" id="dropZone">
+    <div class="drop-zone-icon">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--primary)">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="12" y1="18" x2="12" y2="12"/>
+        <polyline points="9 15 12 12 15 15"/>
+      </svg>
+    </div>
+    <div class="drop-zone-title">Перетащите .xlsx файл сюда</div>
+    <div class="drop-zone-hint">или нажмите для выбора файла</div>
+    <input type="file" id="fileInput" accept=".xlsx,.xls">
+  </div>
+
+  <!-- PARSE RESULTS (hidden by default) -->
+  <div id="parseResults" style="display:none">
+
+    <!-- Summary KPIs -->
+    <div class="section">
+      <div class="section-title">Сводка</div>
+      <div class="kpi-grid">
+        <div class="kpi ok"><div class="kpi-label">Записей</div><div class="kpi-value" id="kpiRecords">0</div></div>
+        <div class="kpi"><div class="kpi-label">Блоков</div><div class="kpi-value" id="kpiBlocks">0</div></div>
+        <div class="kpi"><div class="kpi-label">Подэтажей</div><div class="kpi-value" id="kpiSublevels">0</div></div>
+        <div class="kpi"><div class="kpi-label">Камер</div><div class="kpi-value" id="kpiChambers">0</div></div>
+      </div>
+    </div>
+
+    <!-- Data Quality -->
+    <div class="section">
+      <div class="section-title">Качество данных</div>
+      <div class="quality-grid" id="qualityGrid"></div>
+    </div>
+
+    <!-- Preview Table -->
+    <div class="section">
+      <div class="section-title">Предпросмотр (первые 20 записей)</div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Дата</th>
+              <th>Блок</th>
+              <th>Подэтаж</th>
+              <th>Выработка</th>
+              <th>Веер</th>
+              <th>ГМ, т</th>
+              <th>План, т</th>
+              <th>Факт, т</th>
+              <th>Draw %</th>
+              <th>Забой</th>
+              <th>Cu %</th>
+              <th>Au г/т</th>
+              <th>Ag г/т</th>
+            </tr>
+          </thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Import Button -->
+    <div class="btn-row">
+      <button class="btn primary" id="importBtn" onclick="doImport()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Импортировать в систему
+      </button>
+      <span id="importStatus" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+  </div>
+
+  <!-- CURRENT DATA -->
+  <div class="section current-data">
+    <div class="section-title">Текущие данные в системе</div>
+    <div id="currentDataContent"></div>
+    <div class="btn-row" id="currentDataActions" style="display:none">
+      <button class="btn outline" onclick="exportJSON()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Экспорт JSON
+      </button>
+      <button class="btn danger" onclick="clearData()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        Очистить все данные
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STORAGE WRAPPER ────────────────────────────────
+const _memStore = {};
+const store = {
+  getItem(k){ try { return window['local'+'Storage'].getItem(k); } catch(e){ return _memStore[k]||null; } },
+  setItem(k,v){ try { window['local'+'Storage'].setItem(k,v); } catch(e){} _memStore[k]=v; },
+  removeItem(k){ try { window['local'+'Storage'].removeItem(k); } catch(e){} delete _memStore[k]; }
+};
+
+// ─── THEME ──────────────────────────────────────────
+let dark = true;
+function toggleTheme(){
+  dark=!dark;
+  document.documentElement.setAttribute('data-theme', dark?'dark':'light');
+  const btn=document.getElementById('themeBtn');
+  btn.innerHTML = dark
+    ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+    : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>';
+}
+
+// ─── TOAST ──────────────────────────────────────────
+function showToast(msg, isError){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(()=>{ t.classList.remove('show'); }, 3000);
+}
+
+// ─── UUID ───────────────────────────────────────────
+function uuid(){
+  if(crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
+    const r=Math.random()*16|0;return(c==='x'?r:(r&0x3|0x8)).toString(16);
+  });
+}
+
+// ─── DROP ZONE ──────────────────────────────────────
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+let parsedRecords = [];
+let parsedChambers = [];
+let sourceFileName = '';
+
+dropZone.addEventListener('click', ()=> fileInput.click());
+dropZone.addEventListener('dragover', e=>{ e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', ()=> dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e=>{
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e=>{
+  if(e.target.files.length) handleFile(e.target.files[0]);
+});
+
+// ─── PARSE ──────────────────────────────────────────
+function handleFile(file){
+  if(!file.name.match(/\.xlsx?$/i)){
+    showToast('Выберите файл формата .xlsx', true);
+    return;
+  }
+  sourceFileName = file.name;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      
+      // Choose sheet
+      let sheetName = wb.SheetNames.find(n=> n.includes('Учет выпуска') && !n.includes('месяц'));
+      if(!sheetName) sheetName = wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+      
+      // Convert to array of arrays
+      const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      
+      // Find header row (look for "Дата взрыва" or "Дата" in col A)
+      let headerRow = -1;
+      for(let i=0; i<Math.min(raw.length, 15); i++){
+        const cellA = String(raw[i][0] || '').toLowerCase();
+        if(cellA.includes('дата') && (cellA.includes('взрыв') || cellA.includes('дата'))){
+          headerRow = i; break;
+        }
+      }
+      if(headerRow === -1){
+        // Fallback: try row 3-7 range
+        for(let i=3; i<=7; i++){
+          if(raw[i] && String(raw[i][0]||'').length > 2){
+            headerRow = i - 1; break;
+          }
+        }
+      }
+      if(headerRow === -1) headerRow = 6; // default row 7 (0-indexed 6)
+      
+      const dataStartRow = headerRow + 1;
+      
+      // Parse records
+      parsedRecords = [];
+      for(let i=dataStartRow; i<raw.length; i++){
+        const row = raw[i];
+        if(!row || (!row[0] && !row[1] && !row[2])) continue; // skip empty
+        
+        const dateStr = parseDate(row[0]);
+        const block = cleanStr(row[1]);
+        const sublevel = normalizeSublevel(cleanStr(row[2]));
+        const drift = cleanStr(row[3]);
+        const fan = cleanStr(row[4]);
+        
+        if(!block && !sublevel) continue; // skip truly empty rows
+        
+        parsedRecords.push({
+          id: uuid(),
+          date_blast: dateStr,
+          date_haul: parseDate(row[17]),
+          block: block,
+          sublevel: sublevel,
+          drift: drift,
+          fan: fan,
+          unr: toNum(row[5]),
+          vol_ore_t: toNum(row[6]),
+          vol_waste_t: toNum(row[7]),
+          vol_total_t: toNum(row[8]),
+          plan_t: toNum(row[9]),
+          plan_pct: normalizePct(toNum(row[10])),
+          fact_t: toNum(row[11]),
+          fact_pct: normalizePct(toNum(row[12])),
+          remain_t: toNum(row[13]),
+          remain_pct: normalizePct(toNum(row[14])),
+          nzp_t: toNum(row[15]),
+          face_state: cleanStr(row[16]),
+          note: cleanStr(row[18]),
+          grade_plan: { cu: toNum(row[19]), au: toNum(row[20]), ag: toNum(row[21]) },
+          grade_fact: { cu: toNum(row[22]), au: toNum(row[23]), ag: toNum(row[24]) },
+          grade_delta: { cu: toNum(row[25]), au: toNum(row[26]), ag: toNum(row[27]) }
+        });
+      }
+      
+      // Generate chambers
+      const chamberMap = new Map();
+      parsedRecords.forEach(r=>{
+        const key = `${r.block}|${r.sublevel}|${r.drift}`;
+        if(!chamberMap.has(key)){
+          chamberMap.set(key, {
+            id: uuid(),
+            block: r.block,
+            sublevel: r.sublevel,
+            drift: r.drift,
+            geometry: { height_H:15, width_W:10, length_L:20, drawpoint_spacing:6, looseness:1.15, density:2.8 },
+            geology: {
+              cu_plan: r.grade_plan.cu || 0,
+              au_plan: r.grade_plan.au || 0,
+              ag_plan: r.grade_plan.ag || 0,
+              tonnage_plan: 0
+            },
+            draw_status: { total_drawn_t:0, draw_pct:0, current_face_state:'', last_update:'' }
+          });
+        }
+        const ch = chamberMap.get(key);
+        // Update geology from first record with grades
+        if(r.grade_plan.cu > 0 && ch.geology.cu_plan === 0){
+          ch.geology.cu_plan = r.grade_plan.cu;
+          ch.geology.au_plan = r.grade_plan.au;
+          ch.geology.ag_plan = r.grade_plan.ag;
+        }
+        // Sum tonnage
+        ch.geology.tonnage_plan += r.vol_total_t;
+        ch.draw_status.total_drawn_t += r.fact_t;
+        if(r.face_state) ch.draw_status.current_face_state = r.face_state;
+        if(r.date_haul || r.date_blast){
+          const d = r.date_haul || r.date_blast;
+          if(d > (ch.draw_status.last_update || '')) ch.draw_status.last_update = d;
+        }
+      });
+      
+      // Compute draw_pct
+      chamberMap.forEach(ch=>{
+        if(ch.geology.tonnage_plan > 0){
+          ch.draw_status.draw_pct = Math.round(ch.draw_status.total_drawn_t / ch.geology.tonnage_plan * 1000) / 10;
+        }
+      });
+      
+      parsedChambers = Array.from(chamberMap.values());
+      
+      // Show results
+      showParseResults();
+      
+    } catch(err) {
+      console.error(err);
+      showToast('Ошибка при чтении файла: ' + err.message, true);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function cleanStr(v){ return v == null ? '' : String(v).trim(); }
+
+function toNum(v){
+  if(v == null || v === '') return 0;
+  const n = parseFloat(String(v).replace(',','.'));
+  return isNaN(n) ? 0 : n;
+}
+
+function parseDate(v){
+  if(!v) return '';
+  const s = String(v).trim();
+  // "01.08.2024г" or "01.08.2024"
+  const m = s.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  // Try as Excel serial number
+  if(typeof v === 'number'){
+    const d = new Date((v - 25569) * 86400000);
+    if(!isNaN(d.getTime())) return d.toISOString().slice(0,10);
+  }
+  return s;
+}
+
+function normalizeSublevel(s){
+  if(!s) return '';
+  // Capitalize direction: "запад" → "Запад", "восток" → "Восток"
+  return s.replace(/(запад|восток|сопряжение)/gi, m => m.charAt(0).toUpperCase() + m.slice(1).toLowerCase());
+}
+
+function normalizePct(v){
+  // If value looks like decimal (0.6 = 60%), convert
+  if(v > 0 && v <= 1.05) return Math.round(v * 1000) / 10;
+  return v;
+}
+
+// ─── SHOW RESULTS ───────────────────────────────────
+function showParseResults(){
+  document.getElementById('parseResults').style.display = 'block';
+  
+  // KPIs
+  const blocks = new Set(parsedRecords.map(r=>r.block).filter(Boolean));
+  const sublevels = new Set(parsedRecords.map(r=>r.sublevel).filter(Boolean));
+  document.getElementById('kpiRecords').textContent = parsedRecords.length;
+  document.getElementById('kpiBlocks').textContent = blocks.size;
+  document.getElementById('kpiSublevels').textContent = sublevels.size;
+  document.getElementById('kpiChambers').textContent = parsedChambers.length;
+  
+  // Quality
+  const missingCritical = parsedRecords.filter(r=> !r.date_blast || !r.block || !r.sublevel).length;
+  const withGrades = parsedRecords.filter(r=> r.grade_plan.cu > 0 || r.grade_fact.cu > 0).length;
+  const withoutGrades = parsedRecords.length - withGrades;
+  
+  // Duplicates check
+  const seen = new Set();
+  let dupes = 0;
+  parsedRecords.forEach(r=>{
+    const key = `${r.date_blast}|${r.block}|${r.sublevel}|${r.drift}|${r.fan}`;
+    if(seen.has(key)) dupes++;
+    seen.add(key);
+  });
+  
+  const qg = document.getElementById('qualityGrid');
+  qg.innerHTML = `
+    <div class="quality-item">
+      <div class="quality-dot ${missingCritical === 0 ? 'green' : 'red'}"></div>
+      <div class="quality-text">Пропущены критичные поля (дата, блок, подэтаж)</div>
+      <div class="quality-count">${missingCritical}</div>
+    </div>
+    <div class="quality-item">
+      <div class="quality-dot ${withGrades > 0 ? 'green' : 'yellow'}"></div>
+      <div class="quality-text">Записей с содержаниями / без</div>
+      <div class="quality-count">${withGrades} / ${withoutGrades}</div>
+    </div>
+    <div class="quality-item">
+      <div class="quality-dot ${dupes === 0 ? 'green' : 'yellow'}"></div>
+      <div class="quality-text">Дубликаты (дата+блок+подэтаж+выработка+веер)</div>
+      <div class="quality-count">${dupes}</div>
+    </div>
+  `;
+  
+  // Preview table
+  const tbody = document.getElementById('previewBody');
+  const preview = parsedRecords.slice(0, 20);
+  tbody.innerHTML = preview.map(r=>`
+    <tr>
+      <td>${r.date_blast || '—'}</td>
+      <td>${r.block}</td>
+      <td>${r.sublevel}</td>
+      <td>${r.drift}</td>
+      <td>${r.fan}</td>
+      <td>${r.vol_total_t || '—'}</td>
+      <td>${r.plan_t || '—'}</td>
+      <td>${r.fact_t || '—'}</td>
+      <td>${r.fact_pct ? r.fact_pct.toFixed(1) + '%' : '—'}</td>
+      <td>${r.face_state || '—'}</td>
+      <td>${r.grade_fact.cu || '—'}</td>
+      <td>${r.grade_fact.au || '—'}</td>
+      <td>${r.grade_fact.ag || '—'}</td>
+    </tr>
+  `).join('');
+  
+  // Scroll to results
+  document.getElementById('parseResults').scrollIntoView({behavior:'smooth'});
+}
+
+// ─── IMPORT ─────────────────────────────────────────
+function doImport(){
+  if(!parsedRecords.length){
+    showToast('Нет данных для импорта', true);
+    return;
+  }
+  
+  const data = {
+    version: "1.0",
+    imported_at: new Date().toISOString(),
+    source_file: sourceFileName,
+    mine: "Mine",
+    records: parsedRecords,
+    chambers: parsedChambers
+  };
+  
+  try {
+    store.setItem('uflow_data', JSON.stringify(data));
+    showToast(`Импортировано: ${parsedRecords.length} записей, ${parsedChambers.length} камер`);
+    document.getElementById('importStatus').textContent = 'Импорт выполнен в ' + new Date().toLocaleTimeString('ru-RU');
+    refreshCurrentData();
+  } catch(err) {
+    showToast('Ошибка записи: ' + err.message, true);
+  }
+}
+
+// ─── CURRENT DATA ───────────────────────────────────
+function refreshCurrentData(){
+  const raw = store.getItem('uflow_data');
+  const content = document.getElementById('currentDataContent');
+  const actions = document.getElementById('currentDataActions');
+  
+  if(!raw){
+    content.innerHTML = '<div class="empty-state">Нет импортированных данных</div>';
+    actions.style.display = 'none';
+    return;
+  }
+  
+  try {
+    const d = JSON.parse(raw);
+    const importDate = d.imported_at ? new Date(d.imported_at).toLocaleString('ru-RU') : '—';
+    content.innerHTML = `
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-label">Файл</div><div class="kpi-value" style="font-size:14px">${d.source_file || '—'}</div></div>
+        <div class="kpi"><div class="kpi-label">Записей</div><div class="kpi-value">${(d.records||[]).length}</div></div>
+        <div class="kpi"><div class="kpi-label">Камер</div><div class="kpi-value">${(d.chambers||[]).length}</div></div>
+        <div class="kpi"><div class="kpi-label">Импортировано</div><div class="kpi-value" style="font-size:13px">${importDate}</div></div>
+      </div>
+    `;
+    actions.style.display = 'flex';
+  } catch(e){
+    content.innerHTML = '<div class="empty-state">Ошибка чтения данных</div>';
+    actions.style.display = 'none';
+  }
+}
+
+function exportJSON(){
+  const raw = store.getItem('uflow_data');
+  if(!raw){ showToast('Нет данных', true); return; }
+  const blob = new Blob([raw], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'uflow_data_export.json';
+  a.click();
+  showToast('JSON экспортирован');
+}
+
+function clearData(){
+  if(!confirm('Удалить все импортированные данные?')) return;
+  store.removeItem('uflow_data');
+  showToast('Данные очищены');
+  refreshCurrentData();
+}
+
+// Init
+refreshCurrentData();
+</script>
+</body>
+</html>
